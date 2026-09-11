@@ -1,6 +1,10 @@
 import type { ScriptSegment } from "@stage/script-schema";
 
 export interface StreamingHypothesis {
+  utteranceId?: string;
+  /** Optional cumulative context across ASR result boundaries; text stays raw UI input. */
+  streamId?: string;
+  contextText?: string;
   text: string;
   confidence: number;
   isFinal?: boolean;
@@ -21,6 +25,9 @@ export interface MatchResult {
   observed: string;
   expected: string;
   eligible: boolean;
+  start: number;
+  end: number;
+  fast: boolean;
 }
 
 export interface ScriptMatcher {
@@ -40,7 +47,7 @@ export interface MatcherConfig {
 
 export const defaultMatcherConfig: MatcherConfig = {
   triggerThreshold: 0.78,
-  minimumEvidenceCharacters: 3,
+  minimumEvidenceCharacters: 2,
   weights: {
     scriptPrior: 0.4,
     prefixMatch: 0.35,
@@ -80,58 +87,46 @@ function editSimilarity(left: string, right: string): number {
   return 1 - previous[right.length]! / Math.max(left.length, right.length);
 }
 
-function prefixEvidence(observed: string, expected: string): { quality: number; coverage: number } {
-  const comparedLength = Math.min(observed.length, expected.length);
-  if (comparedLength === 0) return { quality: 0, coverage: 0 };
-  const observedPrefix = observed.slice(-comparedLength);
-  const expectedPrefix = expected.slice(0, comparedLength);
-  const quality = editSimilarity(observedPrefix, expectedPrefix);
-  const coverage = Math.min(1, observed.length / Math.max(6, expected.length * 0.5));
-  return { quality, coverage };
-}
-
 export class PrefixFuzzyMatcher implements ScriptMatcher {
   constructor(private readonly config: MatcherConfig = defaultMatcherConfig) {}
 
   match(hypothesis: StreamingHypothesis, segment: ScriptSegment, context: ScriptContext): MatchResult {
     const observed = normalizeKorean(hypothesis.text);
-    let bestExpected = "";
-    let bestPrefixScore = 0;
-    let bestCoverage = 0;
-
-    for (const text of segment.matchText) {
-      const expected = normalizeKorean(text);
-      const evidence = prefixEvidence(observed, expected);
-      const score = evidence.quality * (0.55 + evidence.coverage * 0.45);
-      if (score > bestPrefixScore) {
-        bestPrefixScore = score;
-        bestCoverage = evidence.coverage;
-        bestExpected = expected;
-      }
-    }
-
     const scriptPrior = context.mode === "NORMAL"
       ? Math.max(0.25, 1 - context.candidateOffset * 0.18)
       : context.mode === "RESYNC"
         ? Math.max(0.65, 0.85 - context.candidateOffset * 0.03)
         : 0.5;
     const weights = this.config.weights;
-    const score =
-      scriptPrior * weights.scriptPrior +
-      bestPrefixScore * weights.prefixMatch +
-      Math.max(0, Math.min(1, hypothesis.confidence)) * weights.asrConfidence +
-      (hypothesis.speechActive ? 1 : 0) * weights.speechOnset;
-    const isExactShortUtterance = observed.length >= 2 && observed === bestExpected;
-    const eligible = observed.length >= this.config.minimumEvidenceCharacters || isExactShortUtterance;
+    const priorScore = scriptPrior * weights.scriptPrior
+      + Math.max(0, Math.min(1, hypothesis.confidence)) * weights.asrConfidence
+      + (hypothesis.speechActive ? 1 : 0) * weights.speechOnset;
+    let best: MatchResult = { segmentId: segment.id, score: priorScore, prefixScore: 0, coverage: 0, observed, expected: "", eligible: false, start: 0, end: 0, fast: false };
 
-    return {
-      segmentId: segment.id,
-      score,
-      prefixScore: bestPrefixScore,
-      coverage: bestCoverage,
-      observed,
-      expected: bestExpected,
-      eligible: eligible && score >= this.config.triggerThreshold
-    };
+    for (const text of segment.matchText) {
+      const expected = normalizeKorean(text);
+      const minimum = Math.max(2, this.config.minimumEvidenceCharacters);
+      const fastStart = observed.indexOf(expected.slice(0, minimum));
+      // Deliberately aggressive ONLY for the next ordered cue. No final-result,
+      // sentence-coverage, confidence, or silence gate on an exact two-syllable prefix.
+      if (context.candidateOffset === 0 && hypothesis.speechActive && expected.length >= minimum && fastStart >= 0) {
+        return { segmentId: segment.id, observed, expected, score: Math.max(this.config.triggerThreshold, priorScore + weights.prefixMatch), prefixScore: 1, coverage: minimum / expected.length, eligible: true, start: fastStart, end: fastStart + minimum, fast: true };
+      }
+      // Wider-window recovery needs stronger evidence than the fast ordered path.
+      const evidenceMinimum = Math.max(4, minimum);
+      for (let start = 0; start <= observed.length - evidenceMinimum; start += 1) {
+        const length = Math.min(observed.length - start, expected.length);
+        if (length < evidenceMinimum) continue;
+        const quality = editSimilarity(observed.slice(start, start + length), expected.slice(0, length));
+        const coverage = Math.min(1, length / Math.max(6, expected.length * 0.5));
+        const prefixScore = quality * (0.55 + coverage * 0.45);
+        const score = priorScore + prefixScore * weights.prefixMatch;
+        const eligible = quality >= 0.75 && score >= this.config.triggerThreshold;
+        if ((eligible && !best.eligible) || (eligible === best.eligible && score > best.score)) {
+          best = { segmentId: segment.id, observed, expected, score, prefixScore, coverage, eligible, start, end: start + length, fast: false };
+        }
+      }
+    }
+    return best;
   }
 }

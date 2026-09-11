@@ -1,10 +1,11 @@
 "use client";
 
 import type { ScriptSegment } from "@stage/script-schema";
-import { useEffect, useRef } from "react";
+import { memo, useEffect, useRef } from "react";
 
-export function CaptionDisplay({ segment, triggerKey, onPaint }: {
+export const CaptionDisplay = memo(function CaptionDisplay({ segment, previewSegment, triggerKey, onPaint }: {
   segment: ScriptSegment | null;
+  previewSegment?: ScriptSegment;
   triggerKey: number | null;
   onPaint: () => void;
 }) {
@@ -16,30 +17,18 @@ export function CaptionDisplay({ segment, triggerKey, onPaint }: {
     onPaint();
   }, [onPaint, triggerKey]);
 
-  if (!segment) {
-    return (
-      <div className="caption-empty">
-        <span>READY FOR CUE</span>
-        <p>마이크를 켜거나 시뮬레이션을 시작하세요</p>
-      </div>
-    );
-  }
+  const visibleSegment = segment ?? previewSegment;
+  if (!visibleSegment) return <div className="caption-card is-preview">대사를 기다리고 있습니다</div>;
 
   return (
-    <div className={`caption-card type-${segment.type.toLowerCase()}`} data-segment={segment.id}>
-      <div className="caption-kicker">
-        <span>{segment.type}</span>
-        <span>{segment.metadata?.scene}</span>
-      </div>
-      <div className="caption-lines">
-        {segment.captions.map((caption) => (
-          <div className="caption-line" key={`${segment.id}-${caption.actor}`}>
-            <span className="actor-name">{caption.actor}</span>
+    <div className={`caption-card type-${visibleSegment.type.toLowerCase()} ${segment ? "" : "is-preview"}`} data-segment={segment?.id} data-preview={!segment} aria-label={segment ? "Prepared caption" : "Prepared caption preview"} aria-live="polite" aria-atomic="true">
+      <div className="caption-lines" key={visibleSegment.id}>
+        {visibleSegment.captions.map((caption) => (
+          <div className="caption-line" key={`${visibleSegment.id}-${caption.actor}`}>
             <p>{caption.text}</p>
           </div>
         ))}
       </div>
     </div>
   );
-}
-
+});

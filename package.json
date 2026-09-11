@@ -13,10 +13,12 @@
     "typecheck": "npm run typecheck --workspace=@stage/web && tsc -p packages/script-schema/tsconfig.json --noEmit && tsc -p packages/alignment/tsconfig.json --noEmit && tsc -p packages/script-engine/tsconfig.json --noEmit && tsc -p packages/shared/tsconfig.json --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "dev:backend": "services/audio-engine/.venv/bin/uvicorn app.main:app --reload --app-dir services/audio-engine",
+    "test:e2e": "playwright test",
+    "dev:backend": "services/audio-engine/.venv/bin/uvicorn app.main:app --reload --reload-dir services/audio-engine/app --app-dir services/audio-engine",
     "test:backend": "services/audio-engine/.venv/bin/python -m pytest services/audio-engine/tests"
   },
   "devDependencies": {
+    "@playwright/test": "1.63.0",
     "@types/node": "22.20.2",
     "typescript": "7.0.2",
     "vitest": "4.1.11"

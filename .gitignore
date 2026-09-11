@@ -6,4 +6,5 @@ coverage/
 .venv/
 __pycache__/
 .pytest_cache/
-
+test-results/
+playwright-report/

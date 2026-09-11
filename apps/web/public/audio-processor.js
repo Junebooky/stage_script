@@ -6,23 +6,27 @@ class CaptionAudioProcessor extends AudioWorkletProcessor {
     this.pending = [];
     this.speechActive = false;
     this.quietFrames = 0;
-    this.frameCounter = 0;
+    this.resamplePhase = 0;
+    this.resampleSum = 0;
+    this.resampleCount = 0;
   }
 
   process(inputs) {
     const channel = inputs[0]?.[0];
     if (!channel?.length) return true;
-    const ratio = sampleRate / this.targetRate;
-    const downsampled = [];
-    for (let index = 0; index < channel.length; index += ratio) {
-      const start = Math.floor(index);
-      const end = Math.min(channel.length, Math.floor(index + ratio));
-      let total = 0;
-      for (let cursor = start; cursor < end; cursor += 1) total += channel[cursor];
-      downsampled.push(total / Math.max(1, end - start));
+    // Preserve resampling phase across 128-frame render quanta. Resetting it for
+    // every quantum produces the wrong sample count at both 44.1 and 48 kHz.
+    for (let index = 0; index < channel.length; index += 1) {
+      this.resampleSum += channel[index];
+      this.resampleCount += 1;
+      this.resamplePhase += this.targetRate;
+      if (this.resamplePhase >= sampleRate) {
+        this.pending.push(this.resampleSum / this.resampleCount);
+        this.resamplePhase -= sampleRate;
+        this.resampleSum = 0;
+        this.resampleCount = 0;
+      }
     }
-    this.pending.push(...downsampled);
-    this.frameCounter += 1;
 
     while (this.pending.length >= this.chunkSize) {
       const pcm = new Float32Array(this.pending.splice(0, this.chunkSize));
@@ -70,4 +74,3 @@ class CaptionAudioProcessor extends AudioWorkletProcessor {
 }
 
 registerProcessor("caption-audio-processor", CaptionAudioProcessor);
-

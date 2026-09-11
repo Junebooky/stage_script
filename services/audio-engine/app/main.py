@@ -39,6 +39,8 @@ async def audio_socket(websocket: WebSocket) -> None:
     try:
         while True:
             message = await websocket.receive()
+            if message.get("type") == "websocket.disconnect":
+                break
             if message.get("bytes") is not None:
                 pcm = message["bytes"]
                 now_ms = time.monotonic() * 1000
@@ -72,4 +74,3 @@ async def audio_socket(websocket: WebSocket) -> None:
                 )
     except WebSocketDisconnect:
         await adapter.reset()
-

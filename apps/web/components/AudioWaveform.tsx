@@ -1,17 +1,18 @@
 "use client";
 
-import { useMemo } from "react";
+import type { CSSProperties } from "react";
+
+const SHAPE = Array.from({ length: 56 }, (_, index) => (
+  (0.2 + 0.8 * Math.sin(Math.PI * (index + 1) / 57)) * (0.4 + ((index * 13) % 17) / 24)
+));
 
 export function AudioWaveform({ level, active }: { level: number; active: boolean }) {
-  const bars = useMemo(() => Array.from({ length: 54 }, (_, index) => 0.22 + ((index * 17) % 11) / 14), []);
+  const energy = Math.max(0, Math.min(1, level));
   return (
-    <div className={`waveform ${active ? "is-active" : ""}`} aria-label={`Audio level ${Math.round(level * 100)} percent`}>
-      {bars.map((base, index) => {
-        const focus = 1 - Math.abs(index - bars.length / 2) / (bars.length / 2);
-        const height = 5 + base * 8 + level * (16 + focus * 30);
-        return <span key={index} style={{ height: `${height}px`, opacity: 0.25 + focus * 0.75 }} />;
-      })}
+    <div className={`audio-waveform ${active ? "is-active" : ""}`} role="img" aria-label="Microphone audio waveform" data-level={energy.toFixed(3)}>
+      {SHAPE.map((shape, index) => (
+        <i key={index} style={{ "--bar-height": `${3 + energy * shape * 48}px` } as CSSProperties} />
+      ))}
     </div>
   );
 }
-

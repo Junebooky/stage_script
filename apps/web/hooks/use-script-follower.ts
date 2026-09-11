@@ -5,7 +5,7 @@ import { ScriptFollowingEngine, type ScriptEngineSnapshot } from "@stage/script-
 import { demoScript, type SegmentType } from "@stage/script-schema";
 import { LatencyTracker, type LatencySnapshot } from "@stage/shared";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { BrowserSpeechASRAdapter } from "@/lib/browser-speech-asr";
+import { BrowserSpeechASRAdapter, type ASRStatus } from "@/lib/browser-speech-asr";
 import { useMicrophone } from "./use-microphone";
 
 const EMPTY_LATENCY: LatencySnapshot = { last: null, p50: null, p95: null, p99: null, samples: 0 };
@@ -18,18 +18,29 @@ export function useScriptFollower() {
   }
   const [snapshot, setSnapshot] = useState<ScriptEngineSnapshot>(() => engineRef.current!.snapshot());
   const [latency, setLatency] = useState<LatencySnapshot>(EMPTY_LATENCY);
-  const [asrStatus, setAsrStatus] = useState<"idle" | "listening" | "error" | "unavailable">("idle");
+  const [latencyBasis, setLatencyBasis] = useState<"speech" | "recognition" | "manual" | null>(null);
+  const latencyBasisRef = useRef<typeof latencyBasis>(null);
+  const [asrStatus, setAsrStatus] = useState<ASRStatus>("idle");
+  const [asrError, setAsrError] = useState<string | null>(null);
+  const [heardText, setHeardText] = useState("");
   const [notice, setNotice] = useState("SIMULATION READY");
   const latencyRef = useRef(new LatencyTracker());
   const partialStepRef = useRef(0);
   const asrRef = useRef<BrowserSpeechASRAdapter | null>(null);
+  const paintFrameRef = useRef<number | null>(null);
 
   const publish = useCallback((next: ScriptEngineSnapshot) => setSnapshot(next), []);
 
   const processHypothesis = useCallback((hypothesis: StreamingHypothesis) => {
+    // Always show what was heard, even when it doesn't match or auto-advance is held.
+    setHeardText(hypothesis.text);
     const engine = engineRef.current!;
     const previousIndex = engine.snapshot().currentIndex;
+    const matchingStartedAt = performance.now();
     const next = engine.processHypothesis(hypothesis);
+    if (next.currentIndex !== previousIndex || hypothesis.isFinal) {
+      console.debug("caption_match", { cue: next.currentIndex + 1, receivedAt: hypothesis.receivedAt, decisionMs: performance.now() - matchingStartedAt, final: Boolean(hypothesis.isFinal), advanced: next.currentIndex !== previousIndex, phase: next.phase });
+    }
     if (next.currentIndex !== previousIndex) {
       partialStepRef.current = 0;
       setNotice(`${next.currentSegment?.type ?? "SEGMENT"} CUE LOCKED`);
@@ -49,28 +60,42 @@ export function useScriptFollower() {
     publish(engineRef.current!.speechEnd());
   }, [publish]);
 
-  const microphone = useMicrophone({ onSpeechStart, onSpeechEnd });
+  const microphone = useMicrophone({ onSpeechStart, onSpeechEnd, onHypothesis: processHypothesis });
 
   useEffect(() => {
-    const adapter = new BrowserSpeechASRAdapter(processHypothesis, (status) => setAsrStatus(status));
+    const adapter = new BrowserSpeechASRAdapter(processHypothesis, (status, detail) => {
+      console.debug("asr_state", { status });
+      setAsrStatus(status);
+      setAsrError(detail ?? null);
+    });
     asrRef.current = adapter;
     if (!adapter.available) setAsrStatus("unavailable");
     return () => adapter.stop();
   }, [processHypothesis]);
 
+  useEffect(() => {
+    if ((microphone.status === "requesting" || microphone.status === "live") && !microphone.backendASR) asrRef.current?.start();
+    else asrRef.current?.stop();
+  }, [microphone.status, microphone.backendASR]);
+
   const startLive = useCallback(async () => {
-    const started = await microphone.start();
+    setHeardText("");
+    setAsrError(null);
+    const capture = microphone.start();
+    // Start recognition in the button gesture, alongside capture initialization.
+    asrRef.current?.start();
+    const started = await capture;
     if (started) {
-      asrRef.current?.start();
       setNotice(asrRef.current?.available ? "LIVE SCRIPT FOLLOWING" : "AUDIO REACTIVE MODE");
-    }
+    } else asrRef.current?.stop();
   }, [microphone]);
 
   const stopLive = useCallback(async () => {
     asrRef.current?.stop();
     await microphone.stop();
+    publish(engineRef.current!.speechEnd());
     setNotice("SIMULATION READY");
-  }, [microphone]);
+  }, [microphone, publish]);
 
   const ensureSimulationSpeech = useCallback(() => {
     const current = engineRef.current!.snapshot();
@@ -175,29 +200,46 @@ export function useScriptFollower() {
   }, [onSpeechEnd]);
 
   const reset = useCallback(() => {
+    if (paintFrameRef.current !== null) cancelAnimationFrame(paintFrameRef.current);
+    paintFrameRef.current = null;
     partialStepRef.current = 0;
     latencyRef.current.reset();
     setLatency(EMPTY_LATENCY);
+    setLatencyBasis(null);
+    latencyBasisRef.current = null;
+    setHeardText("");
     setNotice("SCRIPT RESET");
     publish(engineRef.current!.reset());
   }, [publish]);
 
-  const recordPaint = useCallback((triggeredAt: number, speechOnsetAt: number | null) => {
+  const recordPaint = useCallback((triggeredAt: number, speechOnsetAt: number | null, source: "automatic" | "manual" = "automatic") => {
     const origin = speechOnsetAt ?? triggeredAt;
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
+    const basis = source === "manual" ? "manual" : speechOnsetAt === null ? "recognition" : "speech";
+    if (paintFrameRef.current !== null) cancelAnimationFrame(paintFrameRef.current);
+    paintFrameRef.current = requestAnimationFrame(() => {
+      paintFrameRef.current = requestAnimationFrame(() => {
+        paintFrameRef.current = null;
+        // Rapid manual cues or reset must not publish stale paint measurements.
+        if (engineRef.current!.snapshot().lastTrigger?.triggeredAt !== triggeredAt) return;
         const value = performance.now() - origin;
+        if (latencyBasisRef.current !== basis) latencyRef.current.reset();
+        latencyBasisRef.current = basis;
+        setLatencyBasis(basis);
         setLatency(latencyRef.current.record(value));
         publish(engineRef.current!.markDisplayed());
-        console.debug("caption_latency", { totalMs: Number(value.toFixed(2)), origin, paintedAt: performance.now() });
+        console.debug("caption_latency", { totalMs: Number(value.toFixed(2)), basis, origin, paintedAt: performance.now() });
       });
     });
   }, [publish]);
 
+  useEffect(() => () => {
+    if (paintFrameRef.current !== null) cancelAnimationFrame(paintFrameRef.current);
+  }, []);
+
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
-      if (target?.matches("input, textarea, select, [contenteditable=true]")) return;
+      if (target?.closest("input, textarea, select, button, a, [contenteditable=true]")) return;
       if (event.code === "Space" || event.code === "ArrowRight") {
         event.preventDefault();
         manualNext();
@@ -218,7 +260,10 @@ export function useScriptFollower() {
     script: demoScript,
     snapshot,
     latency,
+    latencyBasis,
     asrStatus,
+    asrError,
+    heardText,
     notice,
     microphone,
     actions: {
