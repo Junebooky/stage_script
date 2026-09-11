@@ -1,0 +1,13 @@
+{
+  "name": "@stage/script-engine",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": "./src/index.ts",
+  "dependencies": {
+    "@stage/alignment": "*",
+    "@stage/script-schema": "*"
+  },
+  "scripts": { "typecheck": "tsc --noEmit" }
+}
+

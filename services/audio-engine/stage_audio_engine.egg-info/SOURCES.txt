@@ -1,0 +1,13 @@
+pyproject.toml
+app/__init__.py
+app/audio.py
+app/main.py
+app/adapters/__init__.py
+app/adapters/base.py
+app/adapters/mock.py
+stage_audio_engine.egg-info/PKG-INFO
+stage_audio_engine.egg-info/SOURCES.txt
+stage_audio_engine.egg-info/dependency_links.txt
+stage_audio_engine.egg-info/requires.txt
+stage_audio_engine.egg-info/top_level.txt
+tests/test_audio.py

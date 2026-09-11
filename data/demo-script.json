@@ -1,0 +1,138 @@
+{
+  "title": "빛이 머무는 자리",
+  "locale": "ko-KR",
+  "segments": [
+    {
+      "id": "seg-001",
+      "order": 1,
+      "type": "SOLO",
+      "captions": [{ "actor": "해온", "text": "어둠이 길어져도 우리는 이 무대를 떠나지 않아" }],
+      "matchText": ["어둠이 길어져도 우리는 이 무대를 떠나지 않아"],
+      "metadata": { "scene": "1막", "notes": "긴 발화 시작" }
+    },
+    {
+      "id": "seg-002",
+      "order": 2,
+      "type": "SOLO",
+      "captions": [{ "actor": "해온", "text": "한 걸음 뒤에는 또 다른 길이 열릴 테니까" }],
+      "matchText": ["한 걸음 뒤에는 또 다른 길이 열릴 테니까"],
+      "metadata": { "scene": "1막" }
+    },
+    {
+      "id": "seg-003",
+      "order": 3,
+      "type": "SOLO",
+      "captions": [{ "actor": "해온", "text": "내 목소리를 따라와" }],
+      "matchText": ["내 목소리를 따라와"],
+      "metadata": { "scene": "1막" }
+    },
+    {
+      "id": "seg-004",
+      "order": 4,
+      "type": "SOLO",
+      "captions": [{ "actor": "리안", "text": "지금?" }],
+      "matchText": ["지금"],
+      "metadata": { "scene": "1막", "notes": "짧은 대답" }
+    },
+    {
+      "id": "seg-005",
+      "order": 5,
+      "type": "SOLO",
+      "captions": [{ "actor": "해온", "text": "그래, 바로 지금" }],
+      "matchText": ["그래 바로 지금"],
+      "metadata": { "scene": "1막", "notes": "빠른 전환" }
+    },
+    {
+      "id": "seg-006",
+      "order": 6,
+      "type": "SOLO",
+      "captions": [{ "actor": "리안", "text": "난 준비됐어" }],
+      "matchText": ["난 준비됐어"],
+      "metadata": { "scene": "1막", "notes": "빠른 전환" }
+    },
+    {
+      "id": "seg-007",
+      "order": 7,
+      "type": "SOLO",
+      "captions": [{ "actor": "해온", "text": "숨을 고르고, 저 빛을 봐" }],
+      "matchText": ["숨을 고르고 저 빛을 봐"],
+      "metadata": { "scene": "1막", "notes": "앞에 3초 정적" }
+    },
+    {
+      "id": "seg-008",
+      "order": 8,
+      "type": "SOLO",
+      "captions": [{ "actor": "해온", "text": "다시 시작해" }],
+      "matchText": ["다시 시작해"],
+      "metadata": { "scene": "1막", "notes": "반복 표현 1" }
+    },
+    {
+      "id": "seg-009",
+      "order": 9,
+      "type": "SOLO",
+      "captions": [{ "actor": "해온", "text": "다시 시작해" }],
+      "matchText": ["다시 시작해"],
+      "metadata": { "scene": "1막", "notes": "반복 표현 2" }
+    },
+    {
+      "id": "seg-010",
+      "order": 10,
+      "type": "OVERLAP",
+      "captions": [
+        { "actor": "해온", "text": "나는 끝까지 문을 두드릴게" },
+        { "actor": "리안", "text": "나는 먼저 불을 밝힐게" }
+      ],
+      "matchText": ["나는 끝까지 문을 두드릴게", "나는 먼저 불을 밝힐게"],
+      "metadata": { "scene": "1막", "song": "두 개의 빛" }
+    },
+    {
+      "id": "seg-011",
+      "order": 11,
+      "type": "SOLO",
+      "captions": [{ "actor": "해온", "text": "들려, 객석 너머의 숨결이" }],
+      "matchText": ["들려 객석 너머의 숨결이"],
+      "metadata": { "scene": "1막" }
+    },
+    {
+      "id": "seg-012",
+      "order": 12,
+      "type": "CHORUS",
+      "captions": [{ "actor": "함께", "text": "우리의 밤은 여기서 시작돼" }],
+      "matchText": ["우리의 밤은 여기서 시작돼"],
+      "metadata": { "scene": "1막", "song": "두 개의 빛" }
+    },
+    {
+      "id": "seg-013",
+      "order": 13,
+      "type": "SOLO",
+      "captions": [{ "actor": "리안", "text": "멀리 돌아온 시간이 아깝지는 않아" }],
+      "matchText": ["멀리 돌아온 시간이 아깝지는 않아"],
+      "metadata": { "scene": "2막", "notes": "긴 솔로 시퀀스" }
+    },
+    {
+      "id": "seg-014",
+      "order": 14,
+      "type": "SOLO",
+      "captions": [{ "actor": "리안", "text": "잃어버린 이름도 노래가 되었고" }],
+      "matchText": ["잃어버린 이름도 노래가 되었고"],
+      "metadata": { "scene": "2막", "notes": "긴 솔로 시퀀스" }
+    },
+    {
+      "id": "seg-015",
+      "order": 15,
+      "type": "SOLO",
+      "captions": [{ "actor": "리안", "text": "멈춰 있던 마음도 박자를 찾았어" }],
+      "matchText": ["멈춰 있던 마음도 박자를 찾았어"],
+      "metadata": { "scene": "2막", "notes": "긴 솔로 시퀀스" }
+    },
+    {
+      "id": "seg-016",
+      "order": 16,
+      "type": "SOLO",
+      "captions": [{ "actor": "리안", "text": "그러니 마지막 음까지 내 곁에 있어 줘" }],
+      "matchText": ["그러니 마지막 음까지 내 곁에 있어 줘"],
+      "metadata": { "scene": "2막", "notes": "긴 솔로 시퀀스" }
+    }
+  ]
+}
+
