@@ -1,6 +1,8 @@
-import type { ScriptSegment } from "@stage/script-schema";
+import type { CueProfile, OperatingMode, ScriptSegment } from "@stage/script-schema";
 
 export interface StreamingHypothesis {
+  /** Adapter verified a post-operator audio generation via reset acknowledgment. */
+  boundaryVerified?: boolean;
   utteranceId?: string;
   /** Optional cumulative context across ASR result boundaries; text stays raw UI input. */
   streamId?: string;
@@ -15,6 +17,10 @@ export interface StreamingHypothesis {
 export interface ScriptContext {
   candidateOffset: number;
   mode: "NORMAL" | "RESYNC" | "FULL_RESYNC";
+  operatingMode?: OperatingMode;
+  nearbySegments?: ScriptSegment[];
+  profile?: CueProfile;
+  timingPrior?: number;
 }
 
 export interface MatchResult {
@@ -28,6 +34,8 @@ export interface MatchResult {
   start: number;
   end: number;
   fast: boolean;
+  selectedAnchor?: string;
+  components?: { text: number; anchor: number; sequence: number; timing: number; asr: number; speech: number };
 }
 
 export interface ScriptMatcher {
@@ -91,6 +99,7 @@ export class PrefixFuzzyMatcher implements ScriptMatcher {
   constructor(private readonly config: MatcherConfig = defaultMatcherConfig) {}
 
   match(hypothesis: StreamingHypothesis, segment: ScriptSegment, context: ScriptContext): MatchResult {
+    if (context.operatingMode === "PERFORMANCE_LOCAL") return matchPerformance(hypothesis, segment, context);
     const observed = normalizeKorean(hypothesis.text);
     const scriptPrior = context.mode === "NORMAL"
       ? Math.max(0.25, 1 - context.candidateOffset * 0.18)
@@ -129,4 +138,72 @@ export class PrefixFuzzyMatcher implements ScriptMatcher {
     }
     return best;
   }
+}
+
+/** Conservative local performance policy; demo's two-syllable policy is isolated above. */
+function matchPerformance(hypothesis: StreamingHypothesis, segment: ScriptSegment, context: ScriptContext): MatchResult {
+  const observed = normalizeKorean(hypothesis.text);
+  const sequence = Math.max(0.3, 1 - context.candidateOffset * 0.2);
+  const asr = Math.max(0, Math.min(1, hypothesis.confidence));
+  const speech = hypothesis.speechActive ? 1 : 0;
+  const timing = context.timingPrior ?? 0;
+  const threshold = Math.max(0.72, context.profile?.thresholds.text ?? 0.82);
+  let best: MatchResult = { segmentId: segment.id, observed, expected: "", score: 0, prefixScore: 0, coverage: 0, start: 0, end: 0, fast: false, eligible: false, components: { text: 0, anchor: 0, sequence, timing, asr, speech } };
+  if (segment.type === "IMAGE" || !speech) return best;
+  const otherTexts = (context.nearbySegments ?? []).filter((other) => other.id !== segment.id).flatMap((other) => other.matchText.map(normalizeKorean));
+  const unique = (anchor: string) => !otherTexts.some((text) => text.includes(anchor));
+  const competingEvidence = new Map<string, number>();
+  const competingQuality = (evidence: string) => {
+    const cached = competingEvidence.get(evidence);
+    if (cached !== undefined) return cached;
+    let score = 0;
+    for (const other of otherTexts) {
+      if (other.includes(evidence)) { score = 1; break; }
+      for (let start = 0; start <= other.length - evidence.length; start += 1) score = Math.max(score, editSimilarity(evidence, other.slice(start, start + evidence.length)));
+    }
+    competingEvidence.set(evidence, score);
+    return score;
+  };
+  const consider = (expected: string, start: number, length: number, quality: number, anchor: number, selectedAnchor?: string) => {
+    const score = quality * 0.5 + anchor * 0.15 + sequence * 0.15 + asr * 0.15 + speech * 0.05;
+    // A canonical anchor can be unique while its fuzzy observation is actually
+    // a perfect previous/nearby lyric. Sequence prior must not override that.
+    const distinctive = quality === 1 || quality - competingQuality(observed.slice(start, start + length)) > 0.03;
+    const eligible = quality >= 0.84 && score >= threshold && distinctive;
+    if ((eligible && !best.eligible) || (eligible === best.eligible && score > best.score)) best = { segmentId: segment.id, observed, expected, score, prefixScore: quality, coverage: length / expected.length, start, end: start + length, fast: false, eligible, selectedAnchor, components: { text: quality, anchor, sequence, timing, asr, speech } };
+  };
+  for (const source of segment.matchText) {
+    const expected = normalizeKorean(source);
+    // A complete short canonical cue is distinct from a shared short prefix.
+    if (expected.length >= 2 && expected.length < 4 && context.candidateOffset === 0 && observed === expected && unique(expected) && asr >= 0.9) consider(expected, 0, expected.length, 1, 1, expected);
+    // Full repeated lyrics are allowed only at the ordered pointer; cursor evidence
+    // must establish a new occurrence, never a revision of the old occurrence.
+    const full = observed.indexOf(expected);
+    if (expected.length >= 4 && full >= 0 && (unique(expected) || context.candidateOffset === 0)) consider(expected, full, expected.length, 1, 1, expected);
+    for (let length = Math.min(12, expected.length); length >= 4; length -= 1) {
+      const prefix = expected.slice(0, length);
+      const start = observed.indexOf(prefix);
+      if (start >= 0 && unique(prefix)) consider(expected, start, length, 1, 1, prefix);
+    }
+    for (const anchor of context.profile?.anchors ?? []) {
+      const text = normalizeKorean(anchor.text);
+      const start = observed.indexOf(text);
+      if (text.length >= 4 && anchor.reliability >= 0.75 && expected.includes(text) && start >= 0 && unique(text)) consider(expected, start, text.length, 1, anchor.reliability, text);
+    }
+    // Strong internal evidence recovers a missing/stretched opening lyric.
+    for (let expectedStart = 0; expectedStart <= expected.length - 4; expectedStart += 1) {
+      for (let length = Math.min(16, expected.length - expectedStart, observed.length); length >= 4; length -= 1) {
+        const anchor = expected.slice(expectedStart, expectedStart + length);
+        if (!unique(anchor)) continue;
+        const exact = observed.indexOf(anchor);
+        if (exact >= 0) consider(expected, exact, length, 1, 1, anchor);
+        if (length < 6) continue;
+        for (let start = 0; start <= observed.length - length; start += 1) {
+          const quality = editSimilarity(observed.slice(start, start + length), anchor);
+          if (quality >= 0.84) consider(expected, start, length, quality, quality, anchor);
+        }
+      }
+    }
+  }
+  return best;
 }

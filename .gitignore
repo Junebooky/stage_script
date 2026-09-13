@@ -8,3 +8,23 @@ __pycache__/
 .pytest_cache/
 test-results/
 playwright-report/
+.stage-data/
+rehearsal-recordings/
+recordings/
+local-models/
+.env
+.env.*
+!.env.example
+
+# Private source recordings and user-provided reference material.
+*.wav
+*.mp3
+*.flac
+*.m4a
+*.aiff
+*.aac
+/ref*.md
+/ref*.tsx
+/implemention_plan.md
+/implementation_plan.md
+/*.pdf

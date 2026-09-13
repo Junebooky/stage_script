@@ -5,6 +5,7 @@ export class HypothesisCursor {
   floor = 0;
   private cueStart: number | null = null;
   private expected = "";
+  private checkpointed = false;
 
   get hasCue(): boolean { return this.cueStart !== null; }
 
@@ -14,6 +15,7 @@ export class HypothesisCursor {
     this.floor = 0;
     this.cueStart = null;
     this.expected = "";
+    this.checkpointed = false;
   }
 
   discard() {
@@ -21,6 +23,7 @@ export class HypothesisCursor {
     this.floor = this.text.length;
     this.cueStart = null;
     this.expected = "";
+    this.checkpointed = true;
   }
 
   update(id: string, text: string): boolean {
@@ -34,6 +37,14 @@ export class HypothesisCursor {
     while (prefix < Math.min(this.text.length, text.length) && this.text[prefix] === text[prefix]) prefix += 1;
     let suffix = 0;
     while (suffix < Math.min(this.text.length, text.length) - prefix && this.text[this.text.length - 1 - suffix] === text[text.length - 1 - suffix]) suffix += 1;
+
+    if (this.checkpointed && prefix < this.floor) {
+      // A late rewrite of checkpointed cumulative speech is not fresh evidence.
+      // Be conservative after operator navigation: discard that revision in full.
+      this.floor = text.length;
+      this.text = text;
+      return true;
+    }
 
     if (prefix < 2 && this.cueStart !== null && !text.startsWith(this.expected.slice(0, 2))) {
       // Some adapters roll over the text without changing result ID.
@@ -71,6 +82,7 @@ export class HypothesisCursor {
   }
 
   consume(start: number, end: number, expected: string) {
+    this.checkpointed = false;
     this.cueStart = start;
     this.floor = end;
     this.expected = expected;

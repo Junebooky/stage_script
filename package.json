@@ -10,9 +10,11 @@
   "scripts": {
     "dev": "npm run dev --workspace=@stage/web",
     "build": "npm run build --workspace=@stage/web",
-    "typecheck": "npm run typecheck --workspace=@stage/web && tsc -p packages/script-schema/tsconfig.json --noEmit && tsc -p packages/alignment/tsconfig.json --noEmit && tsc -p packages/script-engine/tsconfig.json --noEmit && tsc -p packages/shared/tsconfig.json --noEmit",
+    "typecheck": "npm run typecheck --workspace=@stage/web && tsc -p packages/script-schema/tsconfig.json --noEmit && tsc -p packages/alignment/tsconfig.json --noEmit && tsc -p packages/script-engine/tsconfig.json --noEmit && tsc -p packages/shared/tsconfig.json --noEmit && tsc -p packages/rehearsal/tsconfig.json --noEmit",
+    "start:local": "npm run start --workspace=@stage/web -- --hostname 127.0.0.1",
     "test": "vitest run",
     "test:watch": "vitest",
+    "rehearsal:analyze": "node scripts/rehearsal-analyze.mjs",
     "test:e2e": "playwright test",
     "dev:backend": "services/audio-engine/.venv/bin/uvicorn app.main:app --reload --reload-dir services/audio-engine/app --app-dir services/audio-engine",
     "test:backend": "services/audio-engine/.venv/bin/python -m pytest services/audio-engine/tests"
@@ -21,6 +23,7 @@
     "@playwright/test": "1.63.0",
     "@types/node": "22.20.2",
     "typescript": "7.0.2",
-    "vitest": "4.1.11"
+    "vitest": "4.1.11",
+    "vite": "8.3.0"
   }
 }

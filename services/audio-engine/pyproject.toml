@@ -6,9 +6,13 @@ requires-python = ">=3.11"
 dependencies = [
   "fastapi>=0.117,<1",
   "uvicorn[standard]>=0.35,<1",
+  "httpx>=0.28,<1",
 ]
 
 [project.optional-dependencies]
+local-asr = [
+  "faster-whisper>=1.1,<2",
+]
 test = [
   "httpx>=0.28,<1",
   "pytest>=8.4,<10",
@@ -17,4 +21,4 @@ test = [
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]
-
+markers = ["local_asr: opt-in integration with a pre-provisioned local model and Korean audio"]

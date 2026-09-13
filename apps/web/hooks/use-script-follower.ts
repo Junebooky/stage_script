@@ -212,7 +212,7 @@ export function useScriptFollower() {
     publish(engineRef.current!.reset());
   }, [publish]);
 
-  const recordPaint = useCallback((triggeredAt: number, speechOnsetAt: number | null, source: "automatic" | "manual" = "automatic") => {
+  const recordPaint = useCallback((triggeredAt: number, speechOnsetAt: number | null, source: "automatic" | "fallback" | "manual" = "automatic") => {
     const origin = speechOnsetAt ?? triggeredAt;
     const basis = source === "manual" ? "manual" : speechOnsetAt === null ? "recognition" : "speech";
     if (paintFrameRef.current !== null) cancelAnimationFrame(paintFrameRef.current);

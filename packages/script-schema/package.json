@@ -3,7 +3,6 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "exports": "./src/index.ts",
+  "exports": { ".": "./src/index.ts", "./assets": "./src/assets.ts", "./production": "./src/production.ts", "./production-types": "./src/production-types.ts" },
   "scripts": { "typecheck": "tsc --noEmit" }
 }
-

@@ -25,3 +25,15 @@ def test_websocket_accepts_pcm_and_streams_adapter_partials() -> None:
         assert partial["text"] == "오늘 여기서"
         assert partial["is_final"] is False
 
+
+def test_reset_ack_retires_queued_pre_navigation_recognition() -> None:
+    with client.websocket_connect("/ws/audio") as socket:
+        assert socket.receive_json()["reset_generation"] is True
+        socket.send_json({"type": "mock_hypothesis", "text": "오래된 문장"})
+        socket.send_json({"type": "reset", "generation": 3})
+        assert socket.receive_json() == {"type": "reset_ack", "generation": 3}
+        socket.send_json({"type": "mock_hypothesis", "text": "새로운 발화"})
+        socket.send_bytes(b"\x00\x00" * 320)
+        result = socket.receive_json()
+        assert result["text"] == "새로운 발화"
+        assert result["generation"] == 3

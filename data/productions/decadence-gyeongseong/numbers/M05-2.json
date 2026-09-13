@@ -1,0 +1,835 @@
+{
+  "id": "decadence-gyeongseong",
+  "title": "데카당스 경성",
+  "locale": "ko-KR",
+  "acts": [
+    {
+      "id": "act-1",
+      "title": "1막 · M05-2 리허설 범위",
+      "numbers": [
+        {
+          "id": "M05-2",
+          "title": "외로운 별이여 이 밤을 품으소서! (리프라이즈)",
+          "cues": [
+            {
+              "id": "M05-2_C001",
+              "order": 1,
+              "type": "CAPTION",
+              "captions": [
+                {
+                  "actor": "연홍",
+                  "text": "창가로 스며드는 외로운 저 달빛"
+                }
+              ],
+              "matchText": [
+                "창가로 스며드는 외로운 저 달빛"
+              ],
+              "metadata": {
+                "section": "A",
+                "delivery": "sung",
+                "ensemble": "solo",
+                "performers": [
+                  "연홍"
+                ],
+                "repeatGroup": "opening-1",
+                "repeatOccurrence": 1
+              }
+            },
+            {
+              "id": "M05-2_C002",
+              "order": 2,
+              "type": "CAPTION",
+              "captions": [
+                {
+                  "actor": "연홍",
+                  "text": "지금 어딘가 그대도 보고 있나"
+                }
+              ],
+              "matchText": [
+                "지금 어딘가 그대도 보고 있나"
+              ],
+              "metadata": {
+                "section": "A",
+                "delivery": "sung",
+                "ensemble": "solo",
+                "performers": [
+                  "연홍"
+                ],
+                "repeatGroup": "opening-2",
+                "repeatOccurrence": 1
+              }
+            },
+            {
+              "id": "M05-2_C003",
+              "order": 3,
+              "type": "CAPTION",
+              "captions": [
+                {
+                  "actor": "연홍",
+                  "text": "내 성을 맴돌던 그대의 그림자"
+                }
+              ],
+              "matchText": [
+                "내 성을 맴돌던 그대의 그림자"
+              ],
+              "metadata": {
+                "section": "A",
+                "delivery": "sung",
+                "ensemble": "solo",
+                "performers": [
+                  "연홍"
+                ],
+                "repeatGroup": "opening-3",
+                "repeatOccurrence": 1
+              }
+            },
+            {
+              "id": "M05-2_C004",
+              "order": 4,
+              "type": "CAPTION",
+              "captions": [
+                {
+                  "actor": "연홍",
+                  "text": "어서 내 문을 지금 두드려 줘요"
+                }
+              ],
+              "matchText": [
+                "어서 내 문을 지금 두드려 줘요"
+              ],
+              "metadata": {
+                "section": "A",
+                "delivery": "sung",
+                "ensemble": "solo",
+                "performers": [
+                  "연홍"
+                ],
+                "repeatGroup": "opening-4",
+                "repeatOccurrence": 1
+              }
+            },
+            {
+              "id": "M05-2_C005",
+              "order": 5,
+              "type": "CAPTION",
+              "captions": [
+                {
+                  "actor": "조상",
+                  "text": "우리를 갈라 놓은 세상"
+                }
+              ],
+              "matchText": [
+                "우리를 갈라 놓은 세상"
+              ],
+              "metadata": {
+                "section": "A",
+                "delivery": "sung",
+                "ensemble": "solo",
+                "performers": [
+                  "조상"
+                ]
+              }
+            },
+            {
+              "id": "M05-2_C006",
+              "order": 6,
+              "type": "CAPTION",
+              "captions": [
+                {
+                  "actor": "조상",
+                  "text": "끔찍하게 멀어져 버린 사랑"
+                }
+              ],
+              "matchText": [
+                "끔찍하게 멀어져 버린 사랑"
+              ],
+              "metadata": {
+                "section": "A",
+                "delivery": "sung",
+                "ensemble": "solo",
+                "performers": [
+                  "조상"
+                ]
+              }
+            },
+            {
+              "id": "M05-2_C007",
+              "order": 7,
+              "type": "CAPTION",
+              "captions": [
+                {
+                  "actor": "연홍",
+                  "text": "이별은 없는 것"
+                }
+              ],
+              "matchText": [
+                "이별은 없는 것"
+              ],
+              "metadata": {
+                "section": "A",
+                "delivery": "sung",
+                "ensemble": "solo",
+                "performers": [
+                  "연홍"
+                ]
+              }
+            },
+            {
+              "id": "M05-2_C008",
+              "order": 8,
+              "type": "CAPTION",
+              "captions": [
+                {
+                  "actor": "연홍",
+                  "text": "돌아와요 내 품이 매일 그댈 기다리니"
+                }
+              ],
+              "matchText": [
+                "돌아와요 내 품이 매일 그댈 기다리니"
+              ],
+              "metadata": {
+                "section": "A",
+                "delivery": "sung",
+                "ensemble": "solo",
+                "performers": [
+                  "연홍"
+                ]
+              }
+            },
+            {
+              "id": "M05-2_C009",
+              "order": 9,
+              "type": "CAPTION",
+              "captions": [
+                {
+                  "actor": "세련",
+                  "text": "와, 잘하는데!"
+                }
+              ],
+              "matchText": [
+                "와, 잘하는데!"
+              ],
+              "metadata": {
+                "section": "B",
+                "delivery": "spoken",
+                "ensemble": "solo",
+                "performers": [
+                  "세련"
+                ]
+              }
+            },
+            {
+              "id": "M05-2_C010",
+              "order": 10,
+              "type": "CAPTION",
+              "captions": [
+                {
+                  "actor": "연홍",
+                  "text": "정말이요? 그렇게 이야기 해주시니 너무 기뻐요."
+                }
+              ],
+              "matchText": [
+                "정말이요? 그렇게 이야기 해주시니 너무 기뻐요."
+              ],
+              "metadata": {
+                "section": "B",
+                "delivery": "spoken",
+                "ensemble": "solo",
+                "performers": [
+                  "연홍"
+                ]
+              }
+            },
+            {
+              "id": "M05-2_C011",
+              "order": 11,
+              "type": "CAPTION",
+              "captions": [
+                {
+                  "actor": "세련",
+                  "text": "노래는 내가 직접 가르쳐줄 거니까,"
+                }
+              ],
+              "matchText": [
+                "노래는 내가 직접 가르쳐줄 거니까,"
+              ],
+              "metadata": {
+                "section": "B",
+                "delivery": "spoken",
+                "ensemble": "solo",
+                "performers": [
+                  "세련"
+                ]
+              }
+            },
+            {
+              "id": "M05-2_C012",
+              "order": 12,
+              "type": "CAPTION",
+              "captions": [
+                {
+                  "actor": "세련",
+                  "text": "엄마 몰래 언제든지 극장에 놀러와."
+                }
+              ],
+              "matchText": [
+                "엄마 몰래 언제든지 극장에 놀러와."
+              ],
+              "metadata": {
+                "section": "B",
+                "delivery": "spoken",
+                "ensemble": "solo",
+                "performers": [
+                  "세련"
+                ]
+              }
+            },
+            {
+              "id": "M05-2_C013",
+              "order": 13,
+              "type": "CAPTION",
+              "captions": [
+                {
+                  "actor": "연홍",
+                  "text": "진짜요 선생님?"
+                }
+              ],
+              "matchText": [
+                "진짜요 선생님?"
+              ],
+              "metadata": {
+                "section": "B",
+                "delivery": "spoken",
+                "ensemble": "solo",
+                "performers": [
+                  "연홍"
+                ]
+              }
+            },
+            {
+              "id": "M05-2_C014",
+              "order": 14,
+              "type": "CAPTION",
+              "captions": [
+                {
+                  "actor": "세련",
+                  "text": "그렇고 말고, 이제 선생님 말고 이모라 불러."
+                }
+              ],
+              "matchText": [
+                "그렇고 말고, 이제 선생님 말고 이모라 불러."
+              ],
+              "metadata": {
+                "section": "B",
+                "delivery": "spoken",
+                "ensemble": "solo",
+                "performers": [
+                  "세련"
+                ]
+              }
+            },
+            {
+              "id": "M05-2_C015",
+              "order": 15,
+              "type": "CAPTION",
+              "captions": [
+                {
+                  "actor": "세련",
+                  "text": "아니 언니라고 생각해도 괜찮아."
+                }
+              ],
+              "matchText": [
+                "아니 언니라고 생각해도 괜찮아."
+              ],
+              "metadata": {
+                "section": "B",
+                "delivery": "spoken",
+                "ensemble": "solo",
+                "performers": [
+                  "세련"
+                ]
+              }
+            },
+            {
+              "id": "M05-2_C016",
+              "order": 16,
+              "type": "CAPTION",
+              "captions": [
+                {
+                  "actor": "연홍",
+                  "text": "감사합니다."
+                }
+              ],
+              "matchText": [
+                "감사합니다."
+              ],
+              "metadata": {
+                "section": "B",
+                "delivery": "spoken",
+                "ensemble": "solo",
+                "performers": [
+                  "연홍"
+                ]
+              }
+            },
+            {
+              "id": "M05-2_C017",
+              "order": 17,
+              "type": "CAPTION",
+              "captions": [
+                {
+                  "actor": "조상",
+                  "text": "이번에는 가슴 벅찬 템포로 다시 가 볼게요!"
+                }
+              ],
+              "matchText": [
+                "이번에는 가슴 벅찬 템포로 다시 가 볼게요!"
+              ],
+              "metadata": {
+                "section": "B",
+                "delivery": "spoken",
+                "ensemble": "solo",
+                "performers": [
+                  "조상"
+                ]
+              }
+            },
+            {
+              "id": "M05-2_C018",
+              "order": 18,
+              "type": "CAPTION",
+              "captions": [
+                {
+                  "actor": "연홍",
+                  "text": "창가로 스며드는 외로운 저 달빛"
+                }
+              ],
+              "matchText": [
+                "창가로 스며드는 외로운 저 달빛"
+              ],
+              "metadata": {
+                "section": "C",
+                "delivery": "sung",
+                "ensemble": "solo",
+                "performers": [
+                  "연홍"
+                ],
+                "repeatGroup": "opening-1",
+                "repeatOccurrence": 2
+              }
+            },
+            {
+              "id": "M05-2_C019",
+              "order": 19,
+              "type": "CAPTION",
+              "captions": [
+                {
+                  "actor": "연홍",
+                  "text": "지금 어딘가 그대도 보고 있나"
+                }
+              ],
+              "matchText": [
+                "지금 어딘가 그대도 보고 있나"
+              ],
+              "metadata": {
+                "section": "C",
+                "delivery": "sung",
+                "ensemble": "solo",
+                "performers": [
+                  "연홍"
+                ],
+                "repeatGroup": "opening-2",
+                "repeatOccurrence": 2
+              }
+            },
+            {
+              "id": "M05-2_C020",
+              "order": 20,
+              "type": "CAPTION",
+              "captions": [
+                {
+                  "actor": "연홍",
+                  "text": "내 성을 맴돌던 그대의 그림자"
+                }
+              ],
+              "matchText": [
+                "내 성을 맴돌던 그대의 그림자"
+              ],
+              "metadata": {
+                "section": "C",
+                "delivery": "sung",
+                "ensemble": "solo",
+                "performers": [
+                  "연홍"
+                ],
+                "repeatGroup": "opening-3",
+                "repeatOccurrence": 2
+              }
+            },
+            {
+              "id": "M05-2_C021",
+              "order": 21,
+              "type": "CAPTION",
+              "captions": [
+                {
+                  "actor": "연홍",
+                  "text": "어서 내 문을 지금 두드려 줘요"
+                }
+              ],
+              "matchText": [
+                "어서 내 문을 지금 두드려 줘요"
+              ],
+              "metadata": {
+                "section": "C",
+                "delivery": "sung",
+                "ensemble": "solo",
+                "performers": [
+                  "연홍"
+                ],
+                "repeatGroup": "opening-4",
+                "repeatOccurrence": 2
+              }
+            },
+            {
+              "id": "M05-2_C022",
+              "order": 22,
+              "type": "CAPTION",
+              "captions": [
+                {
+                  "actor": "조상",
+                  "text": "저 높은 창가 내겐 닿을 수 없는 곳"
+                }
+              ],
+              "matchText": [
+                "저 높은 창가 내겐 닿을 수 없는 곳"
+              ],
+              "metadata": {
+                "section": "C",
+                "delivery": "sung",
+                "ensemble": "solo",
+                "performers": [
+                  "조상"
+                ]
+              }
+            },
+            {
+              "id": "M05-2_C023",
+              "order": 23,
+              "type": "CAPTION",
+              "captions": [
+                {
+                  "actor": "조상",
+                  "text": "어떻게 감히 그댈 넘볼 수 있나"
+                }
+              ],
+              "matchText": [
+                "어떻게 감히 그댈 넘볼 수 있나"
+              ],
+              "metadata": {
+                "section": "C",
+                "delivery": "sung",
+                "ensemble": "solo",
+                "performers": [
+                  "조상"
+                ]
+              }
+            },
+            {
+              "id": "M05-2_C024",
+              "order": 24,
+              "type": "CAPTION",
+              "captions": [
+                {
+                  "actor": "조상",
+                  "text": "만나서는 안 될 궂은 운명에도"
+                }
+              ],
+              "matchText": [
+                "만나서는 안 될 궂은 운명에도"
+              ],
+              "metadata": {
+                "section": "C",
+                "delivery": "sung",
+                "ensemble": "solo",
+                "performers": [
+                  "조상"
+                ]
+              }
+            },
+            {
+              "id": "M05-2_C025",
+              "order": 25,
+              "type": "CAPTION",
+              "captions": [
+                {
+                  "actor": "조상",
+                  "text": "이미 멈출 수 없던 사랑의 시작"
+                }
+              ],
+              "matchText": [
+                "이미 멈출 수 없던 사랑의 시작"
+              ],
+              "metadata": {
+                "section": "C",
+                "delivery": "sung",
+                "ensemble": "solo",
+                "performers": [
+                  "조상"
+                ]
+              }
+            },
+            {
+              "id": "M05-2_C026",
+              "order": 26,
+              "type": "CAPTION",
+              "captions": [
+                {
+                  "actor": "연홍",
+                  "text": "내게로 와요"
+                }
+              ],
+              "matchText": [
+                "내게로 와요"
+              ],
+              "metadata": {
+                "section": "C",
+                "delivery": "sung",
+                "ensemble": "solo",
+                "performers": [
+                  "연홍"
+                ]
+              }
+            },
+            {
+              "id": "M05-2_C027",
+              "order": 27,
+              "type": "CAPTION",
+              "captions": [
+                {
+                  "actor": "연홍",
+                  "text": "걱정말고 제가 열쇠를 건네드릴 테니"
+                }
+              ],
+              "matchText": [
+                "걱정말고 제가 열쇠를 건네드릴 테니"
+              ],
+              "metadata": {
+                "section": "C",
+                "delivery": "sung",
+                "ensemble": "solo",
+                "performers": [
+                  "연홍"
+                ]
+              }
+            },
+            {
+              "id": "M05-2_C028",
+              "order": 28,
+              "type": "CAPTION",
+              "captions": [
+                {
+                  "actor": "조상",
+                  "text": "잠들지 말아요"
+                }
+              ],
+              "matchText": [
+                "잠들지 말아요"
+              ],
+              "metadata": {
+                "section": "C",
+                "delivery": "sung",
+                "ensemble": "solo",
+                "performers": [
+                  "조상"
+                ]
+              }
+            },
+            {
+              "id": "M05-2_C029",
+              "order": 29,
+              "type": "CAPTION",
+              "captions": [
+                {
+                  "actor": "조상",
+                  "text": "동이트기 전에 그댈 향해 달려갈 테니"
+                }
+              ],
+              "matchText": [
+                "동이트기 전에 그댈 향해 달려갈 테니"
+              ],
+              "metadata": {
+                "section": "C",
+                "delivery": "sung",
+                "ensemble": "solo",
+                "performers": [
+                  "조상"
+                ]
+              }
+            },
+            {
+              "id": "M05-2_C030",
+              "order": 30,
+              "type": "CHORUS",
+              "captions": [
+                {
+                  "actor": "조상 + 연홍 + 전체합창",
+                  "text": "외로운 별이여 잠시 쉬어 가게"
+                }
+              ],
+              "matchText": [
+                "외로운 별이여 잠시 쉬어 가게"
+              ],
+              "metadata": {
+                "section": "C",
+                "delivery": "sung",
+                "ensemble": "chorus",
+                "performers": [
+                  "조상",
+                  "연홍",
+                  "전체합창"
+                ]
+              }
+            },
+            {
+              "id": "M05-2_C031",
+              "order": 31,
+              "type": "CHORUS",
+              "captions": [
+                {
+                  "actor": "조상 + 연홍 + 전체합창",
+                  "text": "이 밤을 포근히 품어 주소서"
+                }
+              ],
+              "matchText": [
+                "이 밤을 포근히 품어 주소서"
+              ],
+              "metadata": {
+                "section": "C",
+                "delivery": "sung",
+                "ensemble": "chorus",
+                "performers": [
+                  "조상",
+                  "연홍",
+                  "전체합창"
+                ]
+              }
+            },
+            {
+              "id": "M05-2_C032",
+              "order": 32,
+              "type": "CHORUS",
+              "captions": [
+                {
+                  "actor": "조상 + 연홍 + 전체합창",
+                  "text": "아득한 달이여 어서 길을 비춰 주오"
+                }
+              ],
+              "matchText": [
+                "아득한 달이여 어서 길을 비춰 주오"
+              ],
+              "metadata": {
+                "section": "C",
+                "delivery": "sung",
+                "ensemble": "chorus",
+                "performers": [
+                  "조상",
+                  "연홍",
+                  "전체합창"
+                ]
+              }
+            },
+            {
+              "id": "M05-2_C033",
+              "order": 33,
+              "type": "CAPTION",
+              "captions": [
+                {
+                  "actor": "조상",
+                  "text": "어두운 숲이여"
+                }
+              ],
+              "matchText": [
+                "어두운 숲이여"
+              ],
+              "metadata": {
+                "section": "C",
+                "delivery": "sung",
+                "ensemble": "solo",
+                "performers": [
+                  "조상"
+                ]
+              }
+            },
+            {
+              "id": "M05-2_C034",
+              "order": 34,
+              "type": "CAPTION",
+              "captions": [
+                {
+                  "actor": "연홍",
+                  "text": "길을 열어 주오"
+                }
+              ],
+              "matchText": [
+                "길을 열어 주오"
+              ],
+              "metadata": {
+                "section": "C",
+                "delivery": "sung",
+                "ensemble": "solo",
+                "performers": [
+                  "연홍"
+                ]
+              }
+            },
+            {
+              "id": "M05-2_C035",
+              "order": 35,
+              "type": "CHORUS",
+              "captions": [
+                {
+                  "actor": "조상 + 연홍",
+                  "text": "우리 잠시 이 밤을 틈타 만날 수 있게"
+                }
+              ],
+              "matchText": [
+                "우리 잠시 이 밤을 틈타 만날 수 있게"
+              ],
+              "metadata": {
+                "section": "C",
+                "delivery": "sung",
+                "ensemble": "duet",
+                "performers": [
+                  "조상",
+                  "연홍"
+                ]
+              }
+            },
+            {
+              "id": "M05-2_C036",
+              "order": 36,
+              "type": "CHORUS",
+              "captions": [
+                {
+                  "actor": "모두 함께",
+                  "text": "창가로 스며드는 운명의 별이여"
+                }
+              ],
+              "matchText": [
+                "창가로 스며드는 운명의 별이여"
+              ],
+              "metadata": {
+                "section": "C",
+                "delivery": "sung",
+                "ensemble": "chorus",
+                "performers": [
+                  "모두 함께"
+                ],
+                "notes": "Instrumental outro follows. No automatic image cue."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

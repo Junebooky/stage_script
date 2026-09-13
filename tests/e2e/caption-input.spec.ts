@@ -306,7 +306,7 @@ test("microphone permission denial keeps the caption visible and explains the mi
   await expect(page.getByRole("img", { name: "Microphone audio waveform" })).toHaveAttribute("data-level", "0.000");
 });
 
-test("short viewports shrink the gyroid before pushing bottom captions offscreen", async ({ page }) => {
+test("short viewports shrink the membrane stage before pushing bottom captions offscreen", async ({ page }) => {
   for (const viewport of [{ width: 1280, height: 720 }, { width: 375, height: 667 }, { width: 844, height: 390 }]) {
     await page.setViewportSize(viewport);
     await page.goto("/demo");

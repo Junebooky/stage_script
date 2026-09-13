@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { StreamingHypothesis } from "@stage/alignment";
-import { decodeAudioHypothesis } from "@/lib/audio-protocol";
+import { decodeAudioHypothesis, RecognitionGenerationGate } from "@/lib/audio-protocol";
+import { performanceSocketUrl } from "@/lib/local-runtime";
 
 type MicStatus = "idle" | "requesting" | "live" | "denied" | "unsupported" | "error";
 type SocketStatus = "offline" | "connecting" | "connected";
@@ -17,6 +18,8 @@ interface ProcessorMessage {
 }
 
 interface UseMicrophoneOptions {
+  localOnly?: boolean;
+  backendDisabled?: boolean;
   onSpeechStart: (at: number) => void;
   onSpeechEnd: () => void;
   onHypothesis: (hypothesis: StreamingHypothesis) => void;
@@ -29,6 +32,7 @@ export function useMicrophone(options: UseMicrophoneOptions) {
   const [bands, setBands] = useState([0, 0, 0]);
   const [error, setError] = useState<string | null>(null);
   const [backendASR, setBackendASR] = useState(false);
+  const [backendError, setBackendError] = useState<string | null>(null);
   const [hasAudio, setHasAudio] = useState(false);
   const contextRef = useRef<AudioContext | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -36,12 +40,17 @@ export function useMicrophone(options: UseMicrophoneOptions) {
   const processorRef = useRef<AudioWorkletNode | null>(null);
   const generationRef = useRef(0);
   const startingRef = useRef(false);
+  const recognitionGateRef = useRef(new RecognitionGenerationGate());
+  const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latestCallbacks = useRef(options);
   useEffect(() => { latestCallbacks.current = options; }, [options]);
 
   const release = useCallback(() => {
     generationRef.current += 1;
     startingRef.current = false;
+    recognitionGateRef.current.reset();
+    if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
+    resetTimerRef.current = null;
     if (processorRef.current) {
       processorRef.current.port.onmessage = null;
       processorRef.current.disconnect();
@@ -60,11 +69,25 @@ export function useMicrophone(options: UseMicrophoneOptions) {
     setStatus("idle");
     setSocketStatus("offline");
     setBackendASR(false);
+    setBackendError(null);
     setLevel(0);
     setBands([0, 0, 0]);
     setHasAudio(false);
     setError(null);
   }, [release]);
+
+  const resetRecognition = useCallback(() => {
+    const socket = socketRef.current;
+    if (!latestCallbacks.current.localOnly || socket?.readyState !== WebSocket.OPEN) return;
+    const generation = recognitionGateRef.current.advance();
+    socket.send(JSON.stringify({ type: "reset", generation }));
+    if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
+    resetTimerRef.current = setTimeout(() => {
+      if (!recognitionGateRef.current.pending) return;
+      setBackendASR(false);
+      setBackendError("LOCAL ASR UNAVAILABLE — 새 발화 경계 확인이 지연됩니다. 수동 송출은 계속 사용할 수 있습니다.");
+    }, 3000);
+  }, []);
 
   const start = useCallback(async () => {
     if (startingRef.current) return false;
@@ -79,13 +102,14 @@ export function useMicrophone(options: UseMicrophoneOptions) {
     setStatus("requesting");
     setError(null);
     setHasAudio(false);
+    setBackendError(null);
     try {
       // Resume while still in the click gesture, before the permission dialog resolves.
       const context = new AudioContext({ latencyHint: "interactive" });
       contextRef.current = context;
       const resumed = context.resume().then(() => null, (cause: unknown) => cause);
       const stream = await navigator.mediaDevices.getUserMedia({
-        audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+        audio: { channelCount: 1, echoCancellation: !latestCallbacks.current.localOnly, noiseSuppression: !latestCallbacks.current.localOnly, autoGainControl: !latestCallbacks.current.localOnly }
       });
       if (generation !== generationRef.current) {
         stream.getTracks().forEach((track) => track.stop());
@@ -107,8 +131,8 @@ export function useMicrophone(options: UseMicrophoneOptions) {
       const configuredUrl = process.env.NEXT_PUBLIC_AUDIO_WS_URL;
       const localUrl = location.protocol === "http:" && ["localhost", "127.0.0.1"].includes(location.hostname)
         ? "ws://localhost:8000/ws/audio" : null;
-      const socketUrl = configuredUrl || localUrl;
-      if (socketUrl) {
+      const socketUrl = latestCallbacks.current.localOnly ? performanceSocketUrl(configuredUrl) : configuredUrl || localUrl;
+      if (socketUrl && !latestCallbacks.current.backendDisabled) {
         try {
           const socket = new WebSocket(socketUrl);
           socketRef.current = socket;
@@ -121,6 +145,7 @@ export function useMicrophone(options: UseMicrophoneOptions) {
             if (generation !== generationRef.current) return;
             setSocketStatus("offline");
             setBackendASR(false);
+            if (latestCallbacks.current.localOnly) setBackendError("LOCAL ASR UNAVAILABLE — 로컬 오디오 엔진 연결을 확인하세요.");
           };
           socket.onclose = disconnected;
           socket.onerror = disconnected;
@@ -128,15 +153,27 @@ export function useMicrophone(options: UseMicrophoneOptions) {
             if (generation !== generationRef.current) return;
             const hypothesis = decodeAudioHypothesis(event.data, performance.now());
             if (hypothesis) {
-              latestCallbacks.current.onHypothesis(hypothesis);
+              if (latestCallbacks.current.localOnly) {
+                const payload = JSON.parse(event.data);
+                const gate = recognitionGateRef.current;
+                if (!gate.accepts(payload.generation)) return;
+                latestCallbacks.current.onHypothesis({ ...hypothesis, boundaryVerified: gate.generation > 0 });
+              } else latestCallbacks.current.onHypothesis(hypothesis);
               return;
             }
             try {
               const payload = JSON.parse(event.data);
               // The shipped mock transport must never be advertised as working ASR.
               if (payload.type === "ready") {
-                setBackendASR(typeof payload.adapter === "string" && !payload.adapter.includes("mock"));
+                const real = typeof payload.adapter === "string" && !payload.adapter.includes("mock") && (!latestCallbacks.current.localOnly || (payload.local_ready === true && payload.reset_generation === true));
+                setBackendASR(real);
+                if (latestCallbacks.current.localOnly && !real) setBackendError(payload.reason || "LOCAL ASR UNAVAILABLE");
               }
+              if (payload.type === "reset_ack" && recognitionGateRef.current.acknowledge(payload.generation)) {
+                if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
+                resetTimerRef.current = null;
+              }
+              if (payload.type === "error") { setBackendASR(false); setBackendError(typeof payload.detail === "string" ? payload.detail : "LOCAL ASR UNAVAILABLE"); }
             } catch { /* Ignore unknown protocol messages. */ }
           };
         } catch {
@@ -159,7 +196,7 @@ export function useMicrophone(options: UseMicrophoneOptions) {
           if ((message.level ?? 0) > 0.04) setHasAudio(true);
         }
         const socket = socketRef.current;
-        if (message.pcm && socket?.readyState === WebSocket.OPEN && socket.bufferedAmount < 64_000) {
+        if (message.pcm && socket?.readyState === WebSocket.OPEN && socket.bufferedAmount < 64_000 && (!latestCallbacks.current.localOnly || !recognitionGateRef.current.pending)) {
           const pcm16 = new Int16Array(message.pcm.length);
           for (let index = 0; index < message.pcm.length; index += 1) {
             const sample = Math.max(-1, Math.min(1, message.pcm[index] ?? 0));
@@ -192,5 +229,5 @@ export function useMicrophone(options: UseMicrophoneOptions) {
   }, [release]);
 
   useEffect(() => release, [release]);
-  return { start, stop, status, socketStatus, level, bands, error, backendASR, hasAudio };
+  return { start, stop, resetRecognition, status, socketStatus, level, bands, error, backendASR, backendError, hasAudio };
 }

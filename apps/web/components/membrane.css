@@ -1,0 +1,19 @@
+.membrane-field { background: #000; }
+.membrane-fallback {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: block;
+  background-color: #000;
+  background-image: radial-gradient(circle, #21497980 1px, transparent 1.5px);
+  background-size: 13px 13px;
+  pointer-events: none;
+}
+.membrane-fallback::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(circle, #c7e5ff 1.8px, transparent 2.7px);
+  background-size: 13px 13px;
+  mask-image: radial-gradient(ellipse 27% 44% at 58% 45%, #000 4%, transparent 88%);
+}

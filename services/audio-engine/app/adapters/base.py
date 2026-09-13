@@ -10,13 +10,16 @@ class StreamingHypothesis:
     confidence: float
     is_final: bool
     timestamp_ms: float
+    utterance_id: str | None = None
+    start_ms: float | None = None
+    end_ms: float | None = None
 
     def as_message(self) -> dict[str, object]:
         return {"type": "hypothesis", **asdict(self)}
 
 
 class StreamingASRAdapter(ABC):
-    """Replace this boundary with sherpa-onnx, NeMo, or another local engine."""
+    """Local mono/16 kHz PCM boundary. Mock implementations are demo-only."""
 
     name: str
 
@@ -28,3 +31,6 @@ class StreamingASRAdapter(ABC):
     async def reset(self) -> None:
         """Reset decoder state at a session boundary, not at every silence."""
 
+    async def poll(self) -> list[StreamingHypothesis]:
+        """Drain asynchronous chunk inference without waiting for another audio frame."""
+        return []

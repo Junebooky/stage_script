@@ -1,6 +1,7 @@
 "use client";
 
 import type { ScriptSegment } from "@stage/script-schema";
+import Image from "next/image";
 import { memo, useEffect, useRef } from "react";
 
 export const CaptionDisplay = memo(function CaptionDisplay({ segment, previewSegment, triggerKey, onPaint }: {
@@ -19,6 +20,12 @@ export const CaptionDisplay = memo(function CaptionDisplay({ segment, previewSeg
 
   const visibleSegment = segment ?? previewSegment;
   if (!visibleSegment) return <div className="caption-card is-preview">대사를 기다리고 있습니다</div>;
+
+  if (visibleSegment.type === "IMAGE" && visibleSegment.image) return (
+    <div className="caption-card caption-image" data-segment={segment?.id} aria-label={segment ? "Prepared image" : "Prepared image preview"}>
+      <Image src={visibleSegment.image.src} alt={visibleSegment.image.alt} fill unoptimized sizes="70vw" style={{ objectFit: "contain" }} />
+    </div>
+  );
 
   return (
     <div className={`caption-card type-${visibleSegment.type.toLowerCase()} ${segment ? "" : "is-preview"}`} data-segment={segment?.id} data-preview={!segment} aria-label={segment ? "Prepared caption" : "Prepared caption preview"} aria-live="polite" aria-atomic="true">

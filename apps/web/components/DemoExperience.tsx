@@ -56,7 +56,7 @@ export function DemoExperience() {
 
       <div className="performance-layout">
         <section className="live-stage" aria-label="Stage presentation">
-          <div className="stage-identity"><span>{follower.script.title}</span></div>
+          <div className="stage-identity"><span>{follower.script.title}</span><nav aria-label="Workspace"><a href="/operator">공연 운영</a><span> · </span><a href="/rehearsal">리허설</a></nav></div>
           <div className="orb-stage">
             <HologramAvatar signal={{ level: signalLevel, bands: microphone.bands, speechActive: snapshot.speechActive }} />
             <div className="stage-horizon" aria-hidden="true" />
