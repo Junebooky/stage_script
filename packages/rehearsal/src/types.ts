@@ -1,14 +1,17 @@
 import type { CueProfile } from "@stage/script-schema";
+import type { ConfidenceBasis } from "@stage/alignment";
 
 export interface TimestampedWord {
   text: string;
   startMs: number;
   endMs: number;
-  confidence: number;
+  confidence: number | null;
+  confidenceBasis?: ConfidenceBasis;
 }
 export interface TimestampedASR extends TimestampedWord {
   id: string;
   words?: TimestampedWord[];
+  providerMetadata?: { avg_logprob?: number; no_speech_prob?: number; wordTimingWarning?: string; [key: string]: unknown };
   /** If absent, replay models delivery at ASR span end, not measured inference time. */
   receivedAtMs?: number;
 }
@@ -32,6 +35,9 @@ export interface CueObservation {
   matchScore?: number;
   normalizedMatchRange?: [number, number];
   transcriptId?: string;
+  asrConfidence?: number | null;
+  asrConfidenceBasis?: ConfidenceBasis;
+  alignmentEvidenceBasis?: "text-sequence-only" | "text-sequence-and-asr";
   timingBasis?: "asr-word-estimate" | "asr-span-interpolation" | "human-confirmed";
   timingReliable?: boolean;
   repetition?: { competingCueIds: string[]; resolvedBy: "sequence-context" | "unresolved" | "unique-text" };
@@ -68,6 +74,8 @@ export interface RehearsalAnalysis {
   createdAt: number;
   revision?: number;
   timestampBasis: "local-asr-pseudo" | "cloud-asr-pseudo";
+  asrProvider?: string;
+  model?: string;
   alignmentMode?: "known-number-local" | "whole-show-global";
   numberId?: string;
   transcript: TimestampedASR[];
@@ -82,6 +90,8 @@ export interface RehearsalAnalysis {
 export interface AnalysisOptions {
   rehearsalId: string;
   timestampBasis?: RehearsalAnalysis["timestampBasis"];
+  asrProvider?: string;
+  model?: string;
   acceptedThreshold?: number;
   warningThreshold?: number;
   minimumAlignmentScore?: number;

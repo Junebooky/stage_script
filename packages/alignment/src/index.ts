@@ -1,5 +1,12 @@
 import type { CueProfile, OperatingMode, ScriptSegment } from "@stage/script-schema";
 
+export type ConfidenceBasis = "provider-native" | "segment-logprob-derived" | "unavailable";
+
+/** Missing acoustic confidence is not a neutral probability or measured zero. */
+export function availableConfidence(value: number | null): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? Math.max(0, Math.min(1, value)) : null;
+}
+
 export interface StreamingHypothesis {
   /** Adapter verified a post-operator audio generation via reset acknowledgment. */
   boundaryVerified?: boolean;
@@ -8,7 +15,8 @@ export interface StreamingHypothesis {
   streamId?: string;
   contextText?: string;
   text: string;
-  confidence: number;
+  confidence: number | null;
+  confidenceBasis?: ConfidenceBasis;
   isFinal?: boolean;
   receivedAt: number;
   speechActive: boolean;
@@ -35,7 +43,7 @@ export interface MatchResult {
   end: number;
   fast: boolean;
   selectedAnchor?: string;
-  components?: { text: number; anchor: number; sequence: number; timing: number; asr: number; speech: number };
+  components?: { text: number; anchor: number; sequence: number; timing: number; asr: number | null; speech: number };
 }
 
 export interface ScriptMatcher {
@@ -107,8 +115,10 @@ export class PrefixFuzzyMatcher implements ScriptMatcher {
         ? Math.max(0.65, 0.85 - context.candidateOffset * 0.03)
         : 0.5;
     const weights = this.config.weights;
+    const asr = availableConfidence(hypothesis.confidence);
+    const availableWeight = asr === null ? 1 - weights.asrConfidence : 1;
     const priorScore = scriptPrior * weights.scriptPrior
-      + Math.max(0, Math.min(1, hypothesis.confidence)) * weights.asrConfidence
+      + (asr === null ? 0 : asr * weights.asrConfidence)
       + (hypothesis.speechActive ? 1 : 0) * weights.speechOnset;
     let best: MatchResult = { segmentId: segment.id, score: priorScore, prefixScore: 0, coverage: 0, observed, expected: "", eligible: false, start: 0, end: 0, fast: false };
 
@@ -119,7 +129,7 @@ export class PrefixFuzzyMatcher implements ScriptMatcher {
       // Deliberately aggressive ONLY for the next ordered cue. No final-result,
       // sentence-coverage, confidence, or silence gate on an exact two-syllable prefix.
       if (context.candidateOffset === 0 && hypothesis.speechActive && expected.length >= minimum && fastStart >= 0) {
-        return { segmentId: segment.id, observed, expected, score: Math.max(this.config.triggerThreshold, priorScore + weights.prefixMatch), prefixScore: 1, coverage: minimum / expected.length, eligible: true, start: fastStart, end: fastStart + minimum, fast: true };
+        return { segmentId: segment.id, observed, expected, score: Math.max(this.config.triggerThreshold, (priorScore + weights.prefixMatch) / availableWeight), prefixScore: 1, coverage: minimum / expected.length, eligible: true, start: fastStart, end: fastStart + minimum, fast: true };
       }
       // Wider-window recovery needs stronger evidence than the fast ordered path.
       const evidenceMinimum = Math.max(4, minimum);
@@ -129,7 +139,7 @@ export class PrefixFuzzyMatcher implements ScriptMatcher {
         const quality = editSimilarity(observed.slice(start, start + length), expected.slice(0, length));
         const coverage = Math.min(1, length / Math.max(6, expected.length * 0.5));
         const prefixScore = quality * (0.55 + coverage * 0.45);
-        const score = priorScore + prefixScore * weights.prefixMatch;
+        const score = (priorScore + prefixScore * weights.prefixMatch) / availableWeight;
         const eligible = quality >= 0.75 && score >= this.config.triggerThreshold;
         if ((eligible && !best.eligible) || (eligible === best.eligible && score > best.score)) {
           best = { segmentId: segment.id, observed, expected, score, prefixScore, coverage, eligible, start, end: start + length, fast: false };
@@ -144,7 +154,7 @@ export class PrefixFuzzyMatcher implements ScriptMatcher {
 function matchPerformance(hypothesis: StreamingHypothesis, segment: ScriptSegment, context: ScriptContext): MatchResult {
   const observed = normalizeKorean(hypothesis.text);
   const sequence = Math.max(0.3, 1 - context.candidateOffset * 0.2);
-  const asr = Math.max(0, Math.min(1, hypothesis.confidence));
+  const asr = availableConfidence(hypothesis.confidence);
   const speech = hypothesis.speechActive ? 1 : 0;
   const timing = context.timingPrior ?? 0;
   const threshold = Math.max(0.72, context.profile?.thresholds.text ?? 0.82);
@@ -165,7 +175,8 @@ function matchPerformance(hypothesis: StreamingHypothesis, segment: ScriptSegmen
     return score;
   };
   const consider = (expected: string, start: number, length: number, quality: number, anchor: number, selectedAnchor?: string) => {
-    const score = quality * 0.5 + anchor * 0.15 + sequence * 0.15 + asr * 0.15 + speech * 0.05;
+    const textAndContext = quality * 0.5 + anchor * 0.15 + sequence * 0.15 + speech * 0.05;
+    const score = asr === null ? textAndContext / 0.85 : textAndContext + asr * 0.15;
     // A canonical anchor can be unique while its fuzzy observation is actually
     // a perfect previous/nearby lyric. Sequence prior must not override that.
     const distinctive = quality === 1 || quality - competingQuality(observed.slice(start, start + length)) > 0.03;
@@ -175,7 +186,7 @@ function matchPerformance(hypothesis: StreamingHypothesis, segment: ScriptSegmen
   for (const source of segment.matchText) {
     const expected = normalizeKorean(source);
     // A complete short canonical cue is distinct from a shared short prefix.
-    if (expected.length >= 2 && expected.length < 4 && context.candidateOffset === 0 && observed === expected && unique(expected) && asr >= 0.9) consider(expected, 0, expected.length, 1, 1, expected);
+    if (expected.length >= 2 && expected.length < 4 && context.candidateOffset === 0 && observed === expected && unique(expected) && asr !== null && asr >= 0.9) consider(expected, 0, expected.length, 1, 1, expected);
     // Full repeated lyrics are allowed only at the ordered pointer; cursor evidence
     // must establish a new occurrence, never a revision of the old occurrence.
     const full = observed.indexOf(expected);

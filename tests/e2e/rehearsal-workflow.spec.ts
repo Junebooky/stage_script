@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 import type { ProfileCandidate, RehearsalAnalysis } from "@stage/rehearsal";
 
-test("raw audio leads to separate observations, human review and a non-promoted challenger", async ({ page, context }) => {
+for (const provider of ["local", "groq"] as const) test(`${provider}: raw audio leads to separate observations, human review and a non-promoted challenger`, async ({ page, context }) => {
   const canonical = { id: "rehearsal-browser-test", title: "리허설 검증 공연", locale: "ko-KR", acts: [
     { id: "act-1", title: "1막", numbers: [{ id: "m01", title: "첫 노래", cues: [
       { id: "one", type: "CAPTION", order: 1, captions: [{ actor: "A", text: "가장 어려운 곳에 주님의 사랑이" }], matchText: ["가장 어려운 곳에 주님의 사랑이"] },
@@ -14,7 +14,9 @@ test("raw audio leads to separate observations, human review and a non-promoted 
   let analysis: RehearsalAnalysis | null = null;
   let candidate: ProfileCandidate | null = null;
   let promotions = 0;
-  const manifest = { id: "recording-one", filename: "whole-show.wav", showId: canonical.id, status: "complete", durationMs: 7000 };
+  const model = provider === "groq" ? "whisper-large-v3" : "local-test-fixture";
+  const evidence = provider === "groq" ? { confidence: null, confidenceBasis: "unavailable" } : { confidence: 0.99, confidenceBasis: "provider-native" };
+  const manifest = { id: "recording-one", filename: "whole-show.wav", showId: canonical.id, status: "complete", durationMs: 7000, asrProvider: provider, model };
   await context.route("**/*", async (route) => {
     const request = route.request();
     const url = new URL(request.url());
@@ -27,6 +29,8 @@ test("raw audio leads to separate observations, human review and a non-promoted 
       rawBytes = request.postDataBuffer()?.length ?? 0;
       expect(url.searchParams.get("showId")).toBe(canonical.id);
       expect(url.searchParams.get("filename")).toBe("whole-show.wav");
+      expect(url.searchParams.get("provider")).toBe(provider);
+      expect(url.searchParams.get("allowCloudUpload")).toBe(String(provider === "groq"));
       uploaded = true;
       return reply({ ...manifest, status: "queued" }, 202);
     }
@@ -35,9 +39,9 @@ test("raw audio leads to separate observations, human review and a non-promoted 
       if (request.method() === "PUT") { analysis = request.postDataJSON(); return reply({ saved: true }); }
       return analysis ? reply(analysis) : reply({ detail: "Not analyzed" }, 404);
     }
-    if (url.pathname.endsWith("/result")) return reply({ manifest, transcript: [
-      { id: "s1", text: "어려운 곳에 주님의 사랑이", startMs: 1000, endMs: 2500, confidence: 0.99 },
-      { id: "s2", text: "우리의 노래는 하늘을 향해", startMs: 5000, endMs: 6500, confidence: 0.99 }
+    if (url.pathname.endsWith("/result")) return reply({ manifest, asrProvider: provider, model, timestampBasis: provider === "groq" ? "cloud-asr-pseudo" : "local-asr-pseudo", transcript: [
+      { id: "s1", text: "어려운 곳에 주님의 사랑이", startMs: 1000, endMs: 2500, ...evidence },
+      { id: "s2", text: "우리의 노래는 하늘을 향해", startMs: 5000, endMs: 6500, ...evidence }
     ] });
     if (url.pathname.endsWith("/audio")) return route.fulfill({ headers, contentType: "audio/wav", body: wav });
     if (url.pathname === "/profiles") return reply({ champion: null, challengers: candidate ? [candidate] : [] });
@@ -56,12 +60,20 @@ test("raw audio leads to separate observations, human review and a non-promoted 
   wav.writeUInt32LE(16000, 24); wav.writeUInt32LE(32000, 28); wav.writeUInt16LE(2, 32); wav.writeUInt16LE(16, 34);
   wav.write("data", 36); wav.writeUInt32LE(3200, 40);
   await page.goto("/rehearsal");
-  await page.getByLabel("Rehearsal ASR provider").selectOption("local");
+  await page.getByLabel("Rehearsal ASR provider").selectOption(provider);
+  if (provider === "groq") await page.getByLabel("Allow external audio upload").check();
   await expect(page.getByText(canonical.title, { exact: false })).toBeVisible();
   await page.getByLabel("Upload rehearsal audio").setInputFiles({ name: "whole-show.wav", mimeType: "audio/wav", buffer: wav });
   await expect(page.locator(".analysis-summary")).toContainText("2 cues");
   expect(rawBytes).toBe(wav.length);
   expect(analysis!.observations.every((observation) => observation.groundTruth === "pseudo")).toBe(true);
+  expect(analysis!.asrProvider).toBe(provider);
+  expect(analysis!.model).toBe(model);
+  if (provider === "groq") {
+    expect(analysis!.observations.every((observation) => observation.asrConfidence === null
+      && observation.alignmentEvidenceBasis === "text-sequence-only")).toBe(true);
+    await expect(page.getByText("ASR: groq / whisper-large-v3", { exact: false })).toBeVisible();
+  }
   await page.getByLabel("Reviewer name").fill("테스트 검토자");
   const observation = page.locator(".observation").first();
   await observation.locator("summary").click();

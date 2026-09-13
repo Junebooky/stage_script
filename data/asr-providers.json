@@ -1,0 +1,35 @@
+{
+  "defaultProviderId": "groq",
+  "providers": [
+    {
+      "id": "groq",
+      "displayName": "Groq Whisper Large v3",
+      "model": "whisper-large-v3",
+      "kind": "external",
+      "requiresCloudConsent": true,
+      "credentialEnvironment": "GROQ_API_KEY",
+      "privacyUrl": "https://console.groq.com/docs/your-data",
+      "consentDescription": "선택한 녹음 전체를 Groq 클라우드 STT API로 전송합니다. 확정 대본은 보내지 않고 로컬 원본은 변경하지 않습니다. Groq의 보관 정책과 계정 설정이 적용됩니다. 앱에서 원격 삭제를 보장하지 않습니다."
+    },
+    {
+      "id": "soniox",
+      "displayName": "Soniox stt-async-v5",
+      "model": "stt-async-v5",
+      "kind": "external",
+      "requiresCloudConsent": true,
+      "credentialEnvironment": "SONIOX_API_KEY",
+      "privacyUrl": "https://soniox.com/docs/security-and-privacy",
+      "consentDescription": "선택한 녹음 전체를 Soniox 미국 API로 전송합니다. 확정 대본은 보내지 않고 로컬 원본은 변경하지 않습니다. 결과 수신 후 이 작업의 원격 전사·파일 삭제를 요청합니다. 삭제 실패 시 보관 정책이 적용됩니다."
+    },
+    {
+      "id": "local",
+      "displayName": "Local ASR",
+      "model": "faster-whisper (configured local model)",
+      "kind": "local",
+      "requiresCloudConsent": false,
+      "credentialEnvironment": null,
+      "privacyUrl": null,
+      "consentDescription": "설치된 로컬 모델만 사용하며 원본 오디오를 외부에 전송하지 않습니다."
+    }
+  ]
+}

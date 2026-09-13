@@ -3,7 +3,7 @@ import { loadProductionCatalog, requireCanonical } from "@stage/script-schema/pr
 import { flattenShow, parseCueProfiles, parseShow } from "@stage/script-schema";
 import { normalizeKorean } from "@stage/alignment";
 import { ScriptFollowingEngine } from "@stage/script-engine";
-import { analyzeNumberRehearsal, buildCueProfiles, canonicalFingerprint, compareCandidate, confirmObservation, type TimestampedASR } from "./index";
+import { analyzeNumberRehearsal, buildASRBenchmark, formatASRBenchmarkReport, buildCueProfiles, canonicalFingerprint, compareCandidate, confirmObservation, type TimestampedASR } from "./index";
 
 // Authoritative real script + SYNTHETIC observations. Not an acoustic benchmark.
 const catalog = loadProductionCatalog();
@@ -160,5 +160,63 @@ describe("M05-2 live conservative interim matching", () => {
     expect(speak(runtime, cues[18]!.captions[0]!.text, 900).currentSegment?.id).toBe(id(18));
     expect(runtime.exportTelemetry().some((event) => event.event === "hold")).toBe(true);
     expect(normalizeKorean(cues[17]!.captions[0]!.text)).toBe(normalizeKorean(cues[0]!.captions[0]!.text));
+  });
+});
+
+describe("Groq-compatible missing acoustic confidence (synthetic, not real audio)", () => {
+  function missingConfidence(): TimestampedASR[] {
+    return transcript().map((span) => ({ ...span, confidence: null, confidenceBasis: "unavailable",
+      words: span.words!.map((word) => ({ ...word, confidence: null, confidenceBasis: "unavailable" })) }));
+  }
+  it("retains null evidence through alignment and replay without rewriting canonical", () => {
+    const before = JSON.stringify(show);
+    const result = analyze(missingConfidence());
+    expect(result.observations.map((item) => item.cueId)).toEqual(cues.map((cue) => cue.id));
+    expect(result.observations.every((item) => item.asrConfidence === null && item.asrConfidenceBasis === "unavailable"
+      && item.alignmentEvidenceBasis === "text-sequence-only" && item.groundTruth === "pseudo")).toBe(true);
+    const replay = compareCandidate(show, result);
+    expect(replay.baseline.triggers.map((item) => item.cueId)).toEqual(cues.map((cue) => cue.id));
+    expect(result.transcript.flatMap((span) => span.words!).every((word) => word.confidence === null)).toBe(true);
+    expect(replay.profiles.every((profile) => profile.status === "candidate" && !profile.fallback.enabled)).toBe(true);
+    expect(JSON.stringify(show)).toBe(before);
+  });
+  it("rejects contradictory confidence provenance and reviews weak derived acoustic evidence", () => {
+    const span = transcript([4])[0]!;
+    expect(() => analyze([{ ...span, confidence: null, confidenceBasis: "provider-native" }])).toThrow("Missing ASR confidence");
+    expect(() => analyze([{ ...span, confidenceBasis: "unavailable" }])).toThrow("Unavailable ASR confidence");
+    for (const evidence of [{ confidence: 0.2, providerMetadata: { avg_logprob: Math.log(0.2) } },
+      { confidence: 0.95, providerMetadata: { no_speech_prob: 0.9 } }]) {
+      const result = analyze([{ ...span, ...evidence, confidenceBasis: "segment-logprob-derived" }]);
+      expect(result.observations[0]!.reviewStatus).toBe("review-required");
+      expect(result.observations[0]!.timingReliable).toBe(false);
+      expect(result.reviewQueue).toHaveLength(1);
+    }
+  });
+  it("reports same-input identity and all 22 sections without inventing real accuracy or live latency", () => {
+    const result = analyzeNumberRehearsal(show, numberId, missingConfidence(), {
+      rehearsalId: "synthetic-groq-benchmark", asrProvider: "groq", model: "whisper-large-v3", timestampBasis: "cloud-asr-pseudo", now: 0 });
+    const report = buildASRBenchmark(show, result, { provider: "groq/whisper-large-v3", model: "whisper-large-v3",
+      audioSha256: "synthetic-audio-identity", transcriptionWallTimeMs: 1234 }, { synthetic: true }, compareCandidate(show, result));
+    expect(report.canonicalCueCount).toBe(36);
+    expect(report.alignedCueCount).toBe(36);
+    expect(report.canonicalCueCoverage).toBe(1);
+    expect(report.repeatedLyrics.map((row) => row.cueId)).toEqual([0, 1, 2, 3, 17, 18, 19, 20].map(id));
+    expect(report.transitions.map((transition) => transition.sections)).toEqual(["A → B", "B → C"]);
+    expect(report.wordConfidence.unavailable).toBe(report.wordCount);
+    expect(report.wordConfidence.native).toBe(0);
+    expect(report.liveLatency).toEqual({ measured: false, p50Ms: null, p95Ms: null, p99Ms: null });
+    expect(report.transcriptQuality.wordErrorRate).toBeNull();
+    expect(report.transcriptQuality.humanVerifiedWrongAlignmentCount).toBeNull();
+    expect(report.audioSha256).toBe("synthetic-audio-identity");
+    expect(report.productionReady).toBe(false);
+    expect(formatASRBenchmarkReport(report).match(/^## \d+\./gm)).toHaveLength(22);
+  });
+  it("records zero matches and unmatched speech without generating a candidate", () => {
+    const result = analyze([{ id: "noise", text: "오늘 점심 메뉴는 김치볶음밥 입니다", startMs: 0, endMs: 1000, confidence: null }]);
+    const report = buildASRBenchmark(show, result, { provider: "groq/whisper-large-v3", audioSha256: "synthetic", transcriptionWallTimeMs: 100 }, {}, null);
+    expect(report.alignedCueCount).toBe(0);
+    expect(report.missedCueIds).toHaveLength(36);
+    expect(report.unmatchedRegions).toHaveLength(1);
+    expect(report.candidateProfile.generated).toBe(false);
   });
 });

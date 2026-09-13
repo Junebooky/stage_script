@@ -13,10 +13,12 @@ from .adapters import MockStreamingASR, StreamingHypothesis
 from .audio import pcm_rms
 from .adapters.local import LocalStreamingASR, claim_local_runtime, get_local_provider, local_readiness, release_local_runtime
 from .rehearsal import recover_interrupted_jobs, router as rehearsal_router
+from .environment import load_backend_environment
 
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
+    load_backend_environment()
     recover_interrupted_jobs()
     yield
 

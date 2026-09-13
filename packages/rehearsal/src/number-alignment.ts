@@ -16,8 +16,11 @@ function validateTranscript(input: readonly TimestampedASR[]): TimestampedASR[] 
     let previousEnd = segment.startMs;
     for (const word of [segment, ...(segment.words ?? [])]) {
       if (typeof word.text !== "string" || !Number.isFinite(word.startMs) || !Number.isFinite(word.endMs)
-        || word.startMs < 0 || word.endMs < word.startMs || !Number.isFinite(word.confidence)
-        || word.confidence < 0 || word.confidence > 1) throw new Error("Invalid timestamped ASR");
+        || word.startMs < 0 || word.endMs < word.startMs || (word.confidence !== null && (!Number.isFinite(word.confidence)
+        || word.confidence < 0 || word.confidence > 1))) throw new Error("Invalid timestamped ASR");
+      if (word.confidenceBasis && !["provider-native", "segment-logprob-derived", "unavailable"].includes(word.confidenceBasis)) throw new Error("Invalid ASR confidence basis");
+      if (word.confidenceBasis === "unavailable" && word.confidence !== null) throw new Error("Unavailable ASR confidence cannot be numeric");
+      if (word.confidence === null && word.confidenceBasis && word.confidenceBasis !== "unavailable") throw new Error("Missing ASR confidence cannot claim a measurement");
       if (word !== segment) {
         if (word.startMs < previousEnd || word.endMs > segment.endMs) throw new Error("Invalid ASR word ordering");
         previousEnd = word.endMs;
@@ -107,8 +110,11 @@ export function analyzeNumberRehearsal(show: Show, numberId: string, input: read
     const evidenceCount = best.choices.filter((choice, index) => index !== slotIndex
       && (slots[index]?.candidates.length === 1 || (index > 0 && choice.index === best.choices[index - 1]!.index + 1))).length;
     const resolved = !competitors.length || (evidenceCount >= 2 && (!rival || best.score - rival.score > 0.25));
-    const confidence = Math.min(1, candidate.score * (0.82 + segment.confidence * 0.18) * (resolved ? 1 : 0.65));
-    const status = segment.confidence < 0.55 ? "review-required" : confidence >= accepted ? "accepted" : confidence >= warning ? "warning" : "review-required";
+    const acousticFactor = segment.confidence === null ? 1 : 0.82 + segment.confidence * 0.18;
+    const confidence = Math.min(1, candidate.score * acousticFactor * (resolved ? 1 : 0.65));
+    const acousticWarning = (segment.confidence !== null && segment.confidence < 0.55)
+      || (typeof segment.providerMetadata?.no_speech_prob === "number" && segment.providerMetadata.no_speech_prob > 0.6);
+    const status = acousticWarning ? "review-required" : confidence >= accepted ? "accepted" : confidence >= warning ? "warning" : "review-required";
     const [startMs, endMs] = spanTime(segment, candidate.start, candidate.end);
     const previous = observations.at(-1);
     const follows = !!previous && previous.cueId === cues[candidate.index - 1]?.id;
@@ -116,6 +122,8 @@ export function analyzeNumberRehearsal(show: Show, numberId: string, input: read
     const observation: CueObservation = {
       id: `${options.rehearsalId}:${observations.length}`, cueId: candidate.cue.id, actId: act.id, numberId,
       startMs, endMs, asrText: segment.text, transcriptId: segment.id, alignmentConfidence: confidence,
+      asrConfidence: segment.confidence, asrConfidenceBasis: segment.confidenceBasis,
+      alignmentEvidenceBasis: segment.confidence === null ? "text-sequence-only" : "text-sequence-and-asr",
       matchScore: candidate.score, normalizedMatchRange: [candidate.start, candidate.end],
       timingBasis: segment.words?.length ? "asr-word-estimate" : "asr-span-interpolation", timingReliable,
       groundTruth: "pseudo", reviewStatus: status, anchors: candidate.anchor.length >= 4 ? [candidate.anchor] : [],
@@ -139,6 +147,7 @@ export function analyzeNumberRehearsal(show: Show, numberId: string, input: read
   const seen = new Set(observations.map((item) => item.cueId));
   return { version: 1, rehearsalId: options.rehearsalId, showId: show.id, canonicalFingerprint: canonicalFingerprint(show),
     createdAt: options.now ?? Date.now(), alignmentMode: "known-number-local", numberId, timestampBasis: options.timestampBasis ?? "local-asr-pseudo",
+    asrProvider: options.asrProvider, model: options.model,
     transcript, observations, reviewQueue, controls: [], skippedNumberIds: seen.size ? [] : [numberId],
     skippedCueIds: cues.filter((cue) => cue.type !== "IMAGE" && !seen.has(cue.id)).map((cue) => cue.id),
     numberRegions: transcript.length ? [{ actId: act.id, numberId, startMs: transcript[0]!.startMs,

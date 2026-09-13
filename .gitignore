@@ -25,6 +25,7 @@ local-models/
 *.aac
 /ref*.md
 /ref*.tsx
+/ref_new_md
 /implemention_plan.md
 /implementation_plan.md
 /*.pdf

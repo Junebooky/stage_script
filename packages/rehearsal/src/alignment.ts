@@ -126,8 +126,8 @@ export function analyzeRehearsal(show: Show, input: readonly TimestampedASR[], o
   const transcript = structuredClone([...input]).sort((a, b) => a.startMs - b.startMs);
   for (const segment of transcript) {
     if (!segment.id || typeof segment.text !== "string" || !Number.isFinite(segment.startMs) || !Number.isFinite(segment.endMs)
-      || segment.startMs < 0 || segment.endMs < segment.startMs || !Number.isFinite(segment.confidence)
-      || segment.confidence < 0 || segment.confidence > 1) throw new Error("Invalid timestamped ASR segment");
+      || segment.startMs < 0 || segment.endMs < segment.startMs || (segment.confidence !== null && (!Number.isFinite(segment.confidence)
+      || segment.confidence < 0 || segment.confidence > 1))) throw new Error("Invalid timestamped ASR segment");
   }
   const numbers: NumberInfo[] = show.acts.flatMap((act) => act.numbers.map((number) => ({
     actId: act.id, numberId: number.id, cues: number.cues, index: 0
@@ -160,7 +160,7 @@ export function analyzeRehearsal(show: Show, input: readonly TimestampedASR[], o
       if (candidate.match.start < floor) continue;
       const collision = candidates.filter((other) => other.cue.id !== candidate.cue.id && other.match.start === candidate.match.start && other.match.score >= candidate.match.score - 0.04);
       const collisionRisk = collision.length ? 1 : 0;
-      const confidence = Math.min(1, candidate.match.score * (0.82 + segment.confidence * 0.18)
+      const confidence = Math.min(1, candidate.match.score * (segment.confidence === null ? 1 : 0.82 + segment.confidence * 0.18)
         * (0.72 + detection.confidence * 0.28) * (collisionRisk ? 0.7 : 1));
       const status: ReviewStatus = confidence >= accepted ? "accepted" : confidence >= warning ? "warning" : "review-required";
       const [startMs, endMs] = spanTime(segment, candidate.match.start, candidate.match.end);

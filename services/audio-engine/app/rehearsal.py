@@ -19,8 +19,8 @@ from typing import Any
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 from fastapi.responses import FileResponse
 
-from .adapters.local import LocalASRUnavailable, claim_local_runtime, get_local_provider, release_local_runtime
-from .adapters.soniox import ExternalASRUnavailable, SonioxProvider, require_soniox_config
+from .adapters.local import claim_local_runtime, release_local_runtime
+from .rehearsal_providers import DEFAULT_PROVIDER, UNAVAILABLE_ERRORS, CloudConsentRequired, get_rehearsal_provider, provider_metadata, provider_audit, cleanup_warning
 from .inspection import inspect_wav, sha256_file
 
 router = APIRouter()
@@ -81,8 +81,9 @@ async def transcribe_rehearsal(identifier: str) -> None:
     claimed = False
     provider = None
     try:
-        external = manifest.get("asrProvider") == "soniox"
-        if not external:
+        selected = manifest.get("asrProvider", "local")  # Legacy jobs were local.
+        metadata = provider_metadata(selected)
+        if metadata["kind"] == "local":
             claim_local_runtime("rehearsal")
             claimed = True
         audio = manifest_path.parent / manifest["storedFilename"]
@@ -91,26 +92,30 @@ async def transcribe_rehearsal(identifier: str) -> None:
             inspection = await asyncio.to_thread(inspect_wav, audio)
             write_json(manifest_path.parent / "inspection.json", inspection)
             manifest["durationMs"] = inspection["durationMs"]
-        provider = SonioxProvider(allow_cloud_upload=manifest.get("cloudUploadAuthorized") is True) if external else await asyncio.to_thread(get_local_provider)
+        provider = await asyncio.to_thread(get_rehearsal_provider, selected, manifest.get("cloudUploadAuthorized") is True)
+        began = time.perf_counter()
         transcript = await asyncio.to_thread(
             provider.transcribe, str(audio), words=True,
         )
         if await asyncio.to_thread(sha256_file, audio) != before:
             raise ValueError("Original audio changed during transcription")
         # Acoustic timestamps originate in ASR, not in canonical show text.
-        result = {"rehearsalId": identifier, "provider": provider.name,
+        elapsed = (time.perf_counter() - began) * 1000
+        result = {"rehearsalId": identifier, "provider": provider.name, "model": metadata["model"], "asrProvider": selected,
+                  "transcriptionWallTimeMs": elapsed, "audioSha256": before, "liveLatencyMeasured": False,
                   "timestampBasis": getattr(provider, "timestamp_basis", "local-asr-pseudo"), "transcript": transcript}
         write_json(manifest_path.parent / "transcript.json", result)
-        manifest.update(status="complete", provider=provider.name, completedAt=time.time() * 1000,
+        manifest.update(status="complete", provider=provider.name, model=metadata["model"], transcriptionWallTimeMs=elapsed, completedAt=time.time() * 1000,
                         transcriptCount=len(transcript), lastSpeechEndMs=max((item["endMs"] for item in transcript), default=0))
     except Exception as error:
         manifest.update(status="failed", error=str(error), completedAt=time.time() * 1000)
     finally:
-        if isinstance(provider, SonioxProvider):
-            write_json(manifest_path.parent / "external-asr.json", {**provider.audit, "rawResult": provider.raw_result})
-            manifest["externalCleanup"] = provider.audit["cleanup"]
-            if any(not item["deleted"] for item in provider.audit["cleanup"]):
-                manifest["warning"] = "Soniox remote cleanup incomplete. Inspect external-asr.json and delete the listed remote objects."
+        audit = provider_audit(provider)
+        if audit is not None:
+            write_json(manifest_path.parent / "external-asr.json", audit)
+            manifest["externalCleanup"] = audit.get("cleanup", [])
+        if warning := cleanup_warning(audit):
+            manifest["warning"] = warning
         if claimed:
             release_local_runtime("rehearsal")
     write_json(manifest_path, manifest)
@@ -128,9 +133,10 @@ def recover_interrupted_jobs() -> None:
 @router.post("/rehearsals", status_code=202)
 async def upload_rehearsal(request: Request, background: BackgroundTasks,
                            filename: str, showId: str = "", numberId: str | None = None,
-                           provider: str = "local", allowCloudUpload: bool = False) -> dict[str, Any]:
+                           provider: str = DEFAULT_PROVIDER, allowCloudUpload: bool = False) -> dict[str, Any]:
     # Fail before accepting private audio if the chosen provider isn't ready.
     await check_rehearsal_provider(provider, allowCloudUpload)
+    metadata = provider_metadata(provider)
     if numberId is not None:
         profile_namespace(showId, numberId)
     extension = Path(filename).suffix.lower()
@@ -142,7 +148,8 @@ async def upload_rehearsal(request: Request, background: BackgroundTasks,
     maximum = int(os.environ.get("STAGE_MAX_AUDIO_BYTES", str(2 * 1024**3)))
     size, checksum = 0, hashlib.sha256()
     manifest = {"id": identifier, "filename": Path(filename).name, "showId": showId, "numberId": numberId,
-                "asrProvider": provider, "cloudUploadAuthorized": provider == "soniox" and allowCloudUpload,
+                "asrProvider": provider, "model": metadata["model"], "providerDisplayName": metadata["displayName"],
+                "cloudUploadAuthorized": metadata["requiresCloudConsent"] and allowCloudUpload,
                 "storedFilename": target.name, "status": "uploading", "createdAt": time.time() * 1000}
     manifest_path = target.parent / "manifest.json"
     write_json(manifest_path, manifest)
@@ -197,18 +204,14 @@ async def retry_rehearsal(identifier: str, background: BackgroundTasks) -> dict[
 
 
 async def check_rehearsal_provider(provider: str, allow_cloud_upload: bool) -> None:
-    if provider not in {"local", "soniox"}:
-        raise HTTPException(400, "Unknown rehearsal ASR provider")
-    if provider == "soniox" and not allow_cloud_upload:
-        raise HTTPException(403, "Explicit audio upload consent for Soniox (US) is required")
     try:
-        if provider == "soniox":
-            require_soniox_config(allow_cloud_upload)
-        else:
-            await asyncio.to_thread(get_local_provider)
-    except (LocalASRUnavailable, ExternalASRUnavailable) as error:
-        label = "EXTERNAL ASR UNAVAILABLE" if provider == "soniox" else "LOCAL ASR UNAVAILABLE"
-        raise HTTPException(503, f"{label}: {error}") from error
+        await asyncio.to_thread(get_rehearsal_provider, provider, allow_cloud_upload)
+    except ValueError as error:
+        raise HTTPException(400, str(error)) from error
+    except CloudConsentRequired as error:
+        raise HTTPException(403, str(error)) from error
+    except UNAVAILABLE_ERRORS as error:
+        raise HTTPException(503, str(error)) from error
 
 
 @router.get("/rehearsals/{identifier}/result")

@@ -7,7 +7,12 @@ import { parseArgs } from "node:util";
 import { createRunnableDevEnvironment, resolveConfig } from "vite";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const { values } = parseArgs({ options: { number: { type: "string" }, audio: { type: "string" }, provider: { type: "string", default: "local" }, "allow-cloud-upload": { type: "boolean" }, "inspect-only": { type: "boolean" } } });
+const asrCatalog = JSON.parse(await readFile(resolve(root, "data/asr-providers.json"), "utf8"));
+const { values } = parseArgs({ options: { number: { type: "string" }, audio: { type: "string" }, provider: { type: "string", default: asrCatalog.defaultProviderId }, "allow-cloud-upload": { type: "boolean" }, "inspect-only": { type: "boolean" } } });
+if (!asrCatalog.providers.some((provider) => provider.id === values.provider)) {
+  console.error("Unknown rehearsal ASR provider; choose local, groq or soniox");
+  process.exit(1);
+}
 // Use the installed TS module runner; no listening server and no
 // duplicated matcher implementation or network dependency resolution.
 const compiler = createRunnableDevEnvironment("cli", await resolveConfig({ root, configFile: false, envDir: false,
@@ -37,20 +42,26 @@ try {
     alignmentMode: "known-number-local", provider: values.provider, cloudUploadAuthorized: !!values["allow-cloud-upload"], startedFrom: "original-local-audio", productionReady: false });
   if (code !== 0 || values["inspect-only"]) process.exitCode = code;
   else {
-    const { analyzeNumberRehearsal, compareCandidate } = await compiler.runner.import(resolve(root, "packages/rehearsal/src/index.ts"));
+    const { analyzeNumberRehearsal, compareCandidate, buildASRBenchmark, formatASRBenchmarkReport } = await compiler.runner.import(resolve(root, "packages/rehearsal/src/index.ts"));
     const observation = JSON.parse(await readFile(resolve(output, "observation.json"), "utf8"));
-    const analysis = analyzeNumberRehearsal(show, numberId, observation.transcript, { rehearsalId: id, timestampBasis: observation.timestampBasis });
+    const analysis = analyzeNumberRehearsal(show, numberId, observation.transcript, { rehearsalId: id, timestampBasis: observation.timestampBasis, asrProvider: observation.asrProvider, model: observation.model });
     await write("alignment.json", analysis);
+    let comparison = null;
     if (!analysis.observations.length) {
       await write("metrics.json", { status: "NO EVALUABLE OBSERVATIONS", baseline: null, candidate: null, productionReady: false });
       console.log("No aligned cues. Review audio/model output; no candidate generated.");
     } else {
-      const comparison = compareCandidate(show, analysis);
+      comparison = compareCandidate(show, analysis);
       await write("metrics.json", comparison);
       await write("candidate-profile.json", { status: "candidate", sampleCount: 1, promoted: false, championId: null,
         canonicalFingerprint: analysis.canonicalFingerprint, showId: show.id, numberId, profiles: comparison.profiles, evaluation: comparison.promotion });
       console.log(`${analysis.observations.length} cue observations; ${analysis.reviewQueue.length} review items. Candidate only; no promotion.`);
     }
+    const inspection = JSON.parse(await readFile(resolve(output, "inspection.json"), "utf8"));
+    const benchmark = buildASRBenchmark(show, analysis, observation, inspection, comparison);
+    await write("asr-benchmark.json", benchmark);
+    await writeFile(resolve(output, "report.md"), formatASRBenchmarkReport(benchmark), { flag: "wx" });
+    console.log(`Report: ${resolve(output, "report.md")}`);
   }
 } catch (error) {
   console.error(error instanceof Error ? error.message : error);

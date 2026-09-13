@@ -85,12 +85,12 @@ test("M05-2 online manual fences ignore old browser finals and keep microphone t
 
 test("real rehearsal defaults to external ASR but cannot upload without explicit consent", async ({ page }) => {
   await page.goto("/rehearsal");
-  await expect(page.getByLabel("Rehearsal ASR provider")).toHaveValue("soniox");
+  await expect(page.getByLabel("Rehearsal ASR provider")).toHaveValue("groq");
   await expect(page.getByLabel("Upload rehearsal audio")).toBeDisabled();
-  await page.getByLabel("Allow Soniox audio upload").check();
+  await page.getByLabel("Allow external audio upload").check();
   await expect(page.getByLabel("Upload rehearsal audio")).toBeEnabled();
   await page.getByLabel("Rehearsal ASR provider").selectOption("local");
   await page.getByLabel("Rehearsal ASR provider").selectOption("soniox");
-  await expect(page.getByLabel("Allow Soniox audio upload")).not.toBeChecked();
+  await expect(page.getByLabel("Allow external audio upload")).not.toBeChecked();
   await expect(page.getByLabel("Upload rehearsal audio")).toBeDisabled();
 });

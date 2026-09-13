@@ -7,8 +7,9 @@ import { analyzeNumberRehearsal, buildCueProfiles, canonicalFingerprint, confirm
 import { localBackendUrl, localRequest, downloadJSON } from "@/lib/local-runtime";
 import { readSelectedShow, storeSelectedShow } from "@/lib/show-storage";
 import { ProductionSelector } from "./ProductionSelector";
+import asrCatalog from "../../../data/asr-providers.json";
 
-interface Manifest { id: string; filename: string; showId: string; numberId?: string; status: string; error?: string; warning?: string; durationMs?: number }
+interface Manifest { id: string; filename: string; showId: string; numberId?: string; status: string; error?: string; warning?: string; durationMs?: number; asrProvider?: string; provider?: string; providerDisplayName?: string; model?: string }
 interface ProfileStore { champion: ProfileCandidate | null; challengers: ProfileCandidate[] }
 
 export function RehearsalWorkspace({ initialShow, catalog }: { initialShow: Show; catalog: ProductionCatalog }) {
@@ -33,7 +34,7 @@ function RehearsalSession({ show, catalog, numberId, onNumber, onShow }: { show:
   const [selected, setSelected] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("ASR을 선택하세요. 확정 자막은 변경하지 않습니다.");
-  const [asrProvider, setASRProvider] = useState("soniox");
+  const [asrProvider, setASRProvider] = useState(asrCatalog.defaultProviderId);
   const [allowCloudUpload, setAllowCloudUpload] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [reviewer, setReviewer] = useState("");
@@ -42,6 +43,7 @@ function RehearsalSession({ show, catalog, numberId, onNumber, onShow }: { show:
   const refreshing = useRef(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const dataset = catalog.datasets.find((item) => item.productionId === show.id && item.id === numberId);
+  const providerMetadata = asrCatalog.providers.find((provider) => provider.id === asrProvider)!;
 
   const refresh = useCallback(async () => {
     if (refreshing.current) return;
@@ -62,8 +64,8 @@ function RehearsalSession({ show, catalog, numberId, onNumber, onShow }: { show:
           return saved;
         }
         catch {
-          const result = await localRequest<{ transcript: TimestampedASR[]; timestampBasis?: RehearsalAnalysis["timestampBasis"] }>(`/rehearsals/${record.id}/result`);
-          const analysis = analyzeNumberRehearsal(show, numberId, result.transcript, { rehearsalId: record.id, timestampBasis: result.timestampBasis });
+          const result = await localRequest<{ transcript: TimestampedASR[]; timestampBasis?: RehearsalAnalysis["timestampBasis"]; asrProvider?: string; model?: string }>(`/rehearsals/${record.id}/result`);
+          const analysis = analyzeNumberRehearsal(show, numberId, result.transcript, { rehearsalId: record.id, timestampBasis: result.timestampBasis, asrProvider: result.asrProvider, model: result.model });
           await localRequest(`/rehearsals/${record.id}/analysis`, { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify(analysis) });
           return analysis;
         }
@@ -85,9 +87,9 @@ function RehearsalSession({ show, catalog, numberId, onNumber, onShow }: { show:
 
   async function upload(file?: File) {
     if (!file) return;
-    if (asrProvider === "soniox" && !allowCloudUpload) { setError("Soniox로 오디오를 전송하려면 동의가 필요합니다."); return; }
+    if (providerMetadata.requiresCloudConsent && !allowCloudUpload) { setError(`${providerMetadata.displayName}로 오디오를 전송하려면 동의가 필요합니다.`); return; }
     setBusy(true); setError(null);
-    setNotice(`오디오 업로드 → ${asrProvider === "soniox" ? "Soniox stt-async-v5" : "로컬 ASR"} → ${numberId} 내부 큐 정렬 → 검토`);
+    setNotice(`오디오 업로드 → ${providerMetadata.displayName} / ${providerMetadata.model} → ${numberId} 내부 큐 정렬 → 검토`);
     try {
       const manifest = await localRequest<Manifest>(`/rehearsals?filename=${encodeURIComponent(file.name)}&showId=${encodeURIComponent(show.id)}&numberId=${encodeURIComponent(numberId)}&provider=${asrProvider}&allowCloudUpload=${allowCloudUpload}`, {
         method: "POST", body: file, headers: { "content-type": file.type || "application/octet-stream" }, signal: AbortSignal.timeout(120_000)
@@ -152,23 +154,23 @@ function RehearsalSession({ show, catalog, numberId, onNumber, onShow }: { show:
       <section className="upload-panel" aria-label="Rehearsal audio upload">
         <span className="eyebrow">01 / ORIGINAL AUDIO · {numberId}</span><h2>이 넘버의 실제 리허설</h2>
         <p>WAV · FLAC · M4A · MP3 / 선택한 넘버 내부에서만 정렬합니다.</p>
-        <label className="reviewer-label">음성 인식 모델 <select aria-label="Rehearsal ASR provider" value={asrProvider} disabled={busy || pending} onChange={(event) => { setASRProvider(event.target.value); setAllowCloudUpload(false); }}><option value="soniox">Soniox stt-async-v5 · 외부 API</option><option value="local">기존 로컬 모델 · 설치된 경우만</option></select></label>
-        {asrProvider === "soniox" ? <><p className="operation-note">백엔드 SONIOX_API_KEY 필요 · 선택한 오디오 전체를 Soniox 미국 서버로 전송합니다. 다운로드 후 이 작업의 원격 파일·전사 삭제를 요청합니다. 삭제 실패 시 최대 30일 보관될 수 있습니다. 대본은 보내지 않습니다.</p><label className="promotion-confirm"><input type="checkbox" aria-label="Allow Soniox audio upload" checked={allowCloudUpload} disabled={busy || pending} onChange={(event) => setAllowCloudUpload(event.target.checked)} />선택한 녹음의 Soniox 외부 전송에 동의합니다.</label></> : null}
-        <input type="file" aria-label="Upload rehearsal audio" accept=".wav,.flac,.m4a,.mp3,audio/*" disabled={busy || (asrProvider === "soniox" && !allowCloudUpload)} onChange={(event) => void upload(event.target.files?.[0])} />
+        <label className="reviewer-label">음성 인식 모델 <select aria-label="Rehearsal ASR provider" value={asrProvider} disabled={busy || pending} onChange={(event) => { setASRProvider(event.target.value); setAllowCloudUpload(false); }}>{asrCatalog.providers.map((provider) => <option key={provider.id} value={provider.id}>{provider.displayName} · {provider.kind === "external" ? "외부 API" : "설치된 모델만"}</option>)}</select></label>
+        {providerMetadata.requiresCloudConsent ? <><p className="operation-note">백엔드 {providerMetadata.credentialEnvironment} 필요 · {providerMetadata.consentDescription} {providerMetadata.privacyUrl ? <a href={providerMetadata.privacyUrl} target="_blank" rel="noopener noreferrer">공급자 개인정보 정책 ↗</a> : null}</p><label className="promotion-confirm"><input type="checkbox" aria-label="Allow external audio upload" checked={allowCloudUpload} disabled={busy || pending} onChange={(event) => setAllowCloudUpload(event.target.checked)} />선택한 녹음의 {providerMetadata.displayName} 외부 전송에 동의합니다.</label></> : null}
+        <input type="file" aria-label="Upload rehearsal audio" accept=".wav,.flac,.m4a,.mp3,audio/*" disabled={busy || pending || (providerMetadata.requiresCloudConsent && !allowCloudUpload)} onChange={(event) => void upload(event.target.files?.[0])} />
         <button onClick={() => void refresh()} disabled={busy}>새로고침</button>
         <p className="operation-note">원본은 로컬 .stage-data에 저장되며 Git에 포함하지 않습니다. 실공연 중에는 분석 작업을 실행하지 마세요.</p>
-        {dataset?.defaultAudioPath ? <details className="registered-audio"><summary>등록 원본 · 재현 가능한 분석 명령</summary><code>{dataset.defaultAudioPath}</code><pre><code>{`npm run rehearsal:analyze -- --number ${numberId}${asrProvider === "soniox" ? " --provider soniox --allow-cloud-upload" : ""}`}</code></pre><p>CLI 결과는 .stage-data/number-analysis에 별도 보관됩니다. 이 업로드 이력에 자동 합쳐지지 않습니다. 키·모델·동의가 없으면 WAV 검사 후 명시적으로 종료하며 보정 수치를 만들지 않습니다.</p></details> : null}
+        {dataset?.defaultAudioPath ? <details className="registered-audio"><summary>등록 원본 · 재현 가능한 분석 명령</summary><code>{dataset.defaultAudioPath}</code><pre><code>{`npm run rehearsal:analyze -- --number ${numberId} --provider ${asrProvider}${providerMetadata.requiresCloudConsent ? " --allow-cloud-upload" : ""}`}</code></pre><p>CLI 결과는 .stage-data/number-analysis에 별도 보관됩니다. 이 업로드 이력에 자동 합쳐지지 않습니다. 키·모델·동의가 없으면 WAV 검사 후 명시적으로 종료하며 보정 수치를 만들지 않습니다.</p></details> : null}
       </section>
       <p className="operation-note" role="status">{notice}</p>
       {error ? <p className="operation-alert" role="alert">{error}</p> : null}
 
       <div className="rehearsal-columns">
         <section className="analysis-panel"><span className="eyebrow">02 / ALIGN & REVIEW</span><h2>리허설 이력</h2>
-          {manifests.length ? <ul className="rehearsal-list">{manifests.map((record) => <li key={record.id}><button onClick={() => setSelected(record.id)} aria-pressed={selected === record.id}>{record.filename}<span>{record.status}</span></button>{record.error ? <p className="operation-note">{record.error}</p> : null}{record.warning ? <p className="operation-alert" role="alert">{record.warning}</p> : null}</li>)}</ul> : <p className="empty-state">오디오를 추가하면 정렬과 검토 목록이 여기에 표시됩니다.</p>}
+          {manifests.length ? <ul className="rehearsal-list">{manifests.map((record) => <li key={record.id}><button onClick={() => setSelected(record.id)} aria-pressed={selected === record.id}>{record.filename}<span>{record.status}</span></button><p className="operation-note">{record.provider ?? record.providerDisplayName ?? record.asrProvider ?? "legacy provider"} / {record.model ?? "model unrecorded"}</p>{record.error ? <p className="operation-note">{record.error}</p> : null}{record.warning ? <p className="operation-alert" role="alert">{record.warning}</p> : null}</li>)}</ul> : <p className="empty-state">오디오를 추가하면 정렬과 검토 목록이 여기에 표시됩니다.</p>}
           {analysis ? <>
             <div className="analysis-summary"><strong>{analysis.observations.length} cues</strong><span>{analysis.numberId} · LOCAL ALIGNMENT</span><span>{analysis.reviewQueue.length} review required</span><span>{analysis.skippedCueIds.length} 미관측 / 생략 후보</span></div>
             <audio ref={audioRef} controls src={localBackendUrl(`/rehearsals/${analysis.rehearsalId}/audio`)} aria-label="Rehearsal review audio" />
-            <p className="operation-note">자동 정렬 시각은 추정값입니다. 직접 들어 확인한 구간만 human-confirmed로 표시합니다.</p>
+            <p className="operation-note">ASR: {analysis.asrProvider ?? manifests.find((record) => record.id === selected)?.asrProvider ?? "legacy provider"} / {analysis.model ?? manifests.find((record) => record.id === selected)?.model ?? "model unrecorded"}. 자동 정렬 시각은 추정값입니다. 직접 들어 확인한 구간만 human-confirmed로 표시합니다.</p>
             <label className="reviewer-label">검토자 / 승인자 <input aria-label="Reviewer name" value={reviewer} onChange={(event) => setReviewer(event.target.value)} placeholder="이름" /></label>
             <div className="observation-list">{analysis.observations.map((observation) => <ObservationRow key={`${analysis.rehearsalId}-${observation.id}-${observation.groundTruth}`} observation={observation} canonical={cues.find((cue) => cue.id === observation.cueId)?.captions.map((line) => line.text).join(" / ") ?? observation.cueId} canReview={!!reviewer.trim()} onListen={() => { if (audioRef.current) { audioRef.current.currentTime = Math.max(0, observation.startMs / 1000 - 0.7); void audioRef.current.play().catch(() => {}); } }} onReview={(start, end) => void review(analysis, observation, start, end)} />)}</div>
             {analysis.reviewQueue.length ? <details><summary>검토 필요 구간 ({analysis.reviewQueue.length})</summary><p className="operation-note">잡음·생략 등 평가할 수 없는 구간만 사유를 남겨 제외하세요. 제외 수는 별도 집계합니다.</p>{analysis.reviewQueue.map((item) => <ReviewQueueRow key={item.id} reason={item.reason} at={item.startMs} enabled={!!reviewer.trim()} onExclude={(reason) => void exclude(analysis, item.id, reason)} />)}</details> : null}

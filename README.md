@@ -74,11 +74,15 @@ Audio → 선택한 ASR → Known-number Local Cue Alignment
       → Observation / Review → Cue Profile → 전체 이력 Replay → 운영자 Promotion
 ```
 
-`/rehearsal` 기본값은 M05-2와 **Soniox stt-async-v5**입니다. 선택한 넘버의 WAV/FLAC/M4A/MP3를 업로드하면 백엔드가 timestamp ASR을 만들고 브라우저가 그 넘버 내부만 정렬합니다. 다른 넘버를 녹음했다면 해당 canonical을 먼저 등록·선택하세요. Global alignment는 별도 유틸리티이며 이 경로에서는 사용하지 않습니다. 자동 시각은 **pseudo-ground-truth**이며 직접 듣고 시각/검토자 이름을 저장한 경우만 `HUMAN CONFIRMED`입니다. 단어 시각 없는 보간 결과는 정밀 latency 평가에서 제외합니다. 미정렬·반복 충돌은 검토 목록에 남습니다.
+`/rehearsal` 기본값은 M05-2와 **Groq Whisper Large v3**입니다. Soniox stt-async-v5는 외부 대안이며, 로컬 모델이 준비되면 faster-whisper를 명시적으로 선택할 수 있습니다. 기본값·모델 표시·동의 정책은 `data/asr-providers.json`에서 공유합니다. 선택한 넘버의 WAV/FLAC/M4A/MP3를 업로드하면 백엔드가 timestamp ASR을 만들고 브라우저가 그 넘버 내부만 정렬합니다. 다른 넘버를 녹음했다면 해당 canonical을 먼저 등록·선택하세요. Global alignment는 별도 유틸리티이며 이 경로에서는 사용하지 않습니다. 자동 시각은 **pseudo-ground-truth**이며 직접 듣고 시각/검토자 이름을 저장한 경우만 `HUMAN CONFIRMED`입니다. 단어 시각 없는 보간 결과는 정밀 latency 평가에서 제외합니다. 미정렬·반복 충돌은 검토 목록에 남습니다.
 
 Soniox는 한국어, 토큰 시각·신뢰도를 제공하는 현재 외부 모델로 선택했습니다. 한국어 뮤지컬에 대한 독립 비교 없이 절대적인 최고 성능을 주장하지 않습니다. [모델](https://soniox.com/docs/stt/models) · [시각](https://soniox.com/docs/stt/concepts/timestamps) · [신뢰도](https://soniox.com/docs/stt/concepts/confidence-scores).
 
-백엔드를 실행하는 셸에 `SONIOX_API_KEY`를 설정한 뒤 서버를 재시작하세요. 키를 채팅·브라우저·Git에 넣지 마세요. `.env` 파일을 자동 로드하지 않으며 서버 환경변수를 사용합니다. 화면의 외부 전송 동의 또는 CLI의 `--allow-cloud-upload`가 없으면 네트워크 요청 전에 중단합니다. 파일 전체를 Soniox 미국 API로 보내며 canonical 대본은 전송하지 않습니다. 결과 수신 후 이 실행의 원격 전사·파일만 삭제 요청합니다. 삭제 실패는 `external-asr.json`과 이력 경고에 기록합니다. 삭제되지 않은 비동기 자료는 서비스 정책에 따라 최대 30일 보관될 수 있습니다. [보관 정책](https://soniox.com/docs/security-and-privacy).
+백엔드 환경변수 또는 Git에서 제외되는 `services/audio-engine/.env.local`에 `GROQ_API_KEY` / `SONIOX_API_KEY`를 설정한 뒤 서버를 재시작하세요. 빈 형식은 `.env.example`에 있습니다. `.env.local`은 Python 서버 시작과 CLI 진입점에서만 로드하며 기존 환경변수가 우선합니다. 테스트·CI는 로드하지 않습니다. 키를 클라이언트 코드, `NEXT_PUBLIC_*`, 채팅, Git에 넣지 마세요. 화면의 외부 전송 동의 또는 CLI의 `--allow-cloud-upload`가 없으면 네트워크 요청 전에 중단합니다. 키가 있어도 동의가 없으면 업로드하지 않습니다.
+
+Groq는 **녹음 파일 분석 전용**입니다. `whisper-large-v3`, 한국어, temperature 0, `verbose_json`, word+segment 시각을 요청하며 대본·cue ID·앵커 prompt는 보내지 않습니다. 원본 파일을 먼저 전송하고 크기 제한으로 거절된 경우에만 임시 lossless FLAC으로 한 번 재시도합니다. 샘플레이트·채널·전체 타임라인을 유지하고 원본을 변경하지 않습니다. FLAC도 거절되면 정확한 offset 분할이 필요하다는 오류로 중단합니다. 단어 confidence가 없으면 `null/unavailable`이고 segment `exp(avg_logprob)`는 `segment-logprob-derived`로 구별합니다. 이는 보정된 단어 확률이 아닙니다. [Groq STT 명세](https://console.groq.com/docs/speech-to-text).
+
+Groq에는 파일 전체가 전송됩니다. 이 전사 endpoint에 원격 삭제 기능은 없으므로 앱이 삭제나 zero-retention을 보장하지 않습니다. 보관 예외와 계정 설정은 [Groq 데이터 정책](https://console.groq.com/docs/your-data)을 확인하세요. Soniox 선택 시에는 미국 API로 전송하고 결과 수신 후 이 실행의 원격 전사·파일만 삭제 요청합니다. 삭제 실패는 `external-asr.json`과 이력 경고에 기록합니다. 삭제되지 않은 비동기 자료는 서비스 정책에 따라 최대 30일 보관될 수 있습니다. [Soniox 보관 정책](https://soniox.com/docs/security-and-privacy).
 
 ### M05-2 원본 검사·분석 명령
 
@@ -88,14 +92,17 @@ Soniox는 한국어, 토큰 시각·신뢰도를 제공하는 현재 외부 모�
 # 외부 전송 없음: 24-bit WAV 전체 디코딩 + 전후 SHA-256 검사
 npm run rehearsal:analyze -- --number M05-2 --inspect-only
 
-# 키 설정 및 해당 녹음의 Soniox 미국 업로드 승인 후에만 실행
+# 키 설정 및 이 특정 녹음의 Groq 업로드 승인 후에만 실행
+npm run rehearsal:analyze -- --number M05-2 --provider groq --allow-cloud-upload
+
+# 대안: 해당 녹음의 Soniox 미국 업로드 승인 후에만 실행
 npm run rehearsal:analyze -- --number M05-2 --provider soniox --allow-cloud-upload
 
 # 이미 설치된 로컬 모델을 명시적으로 사용하는 경우
 npm run rehearsal:analyze -- --number M05-2 --provider local
 ```
 
-매번 `.stage-data/number-analysis/run-<UUID>/`를 만들고 원본/이전 실행을 덮어쓰지 않습니다. `inspection.json`, `status.json`, `run.json`; 실제 ASR 성공 시 `observation.json`, `alignment.json`, `metrics.json`, 근거가 있으면 `candidate-profile.json`을 추가합니다. 외부 호출 감사는 `external-asr.json`입니다. 성공 0 / 실패 1 / 모델·키·동의 없음 2로 종료합니다. CLI 결과는 업로드 이력에 자동 합쳐지지 않습니다. 현재 실제 원본은 검사만 완료했으며 외부 전사·실제 후보·음향 성능 수치는 아직 없습니다.
+매번 `.stage-data/number-analysis/run-<UUID>/`를 만들고 원본/이전 실행을 덮어쓰지 않습니다. `inspection.json`, `status.json`, `run.json`; 실제 ASR 성공 시 `observation.json`, `alignment.json`, `metrics.json`, 근거가 있으면 `candidate-profile.json`을 추가합니다. `asr-benchmark.json`과 22항목 `report.md`에는 동일 오디오 SHA, provider/model, cue coverage, 미관측/반복/전환 검토, 단어 시각·신뢰도 유무, 배치 wall time을 기록합니다. 인간 정답 없는 WER/CER와 live latency는 계산하지 않습니다. 외부 호출 감사는 `external-asr.json`이며 헤더·키는 저장하지 않습니다. 성공 0 / 실패 1 / 모델·키·동의 없음 2로 종료합니다. CLI 결과는 업로드 이력에 자동 합쳐지지 않습니다. 현재 실제 원본은 검사만 완료했으며 특정 녹음의 외부 전송 승인 대기로 Groq 실전사·실제 후보·음향 성능 수치는 아직 없습니다. [Groq 구현·검증 현황](docs/groq-rehearsal-report.md).
 
 다음 넘버는 `data/productions/registry.json` 항목과 그 항목의 canonical JSON을 추가합니다. 기본값은 registry의 `defaultNumberId` 하나로 관리합니다. canonical 없는 항목은 `CANONICAL SCRIPT REQUIRED`로 비활성화합니다. 실제 M06 등 미제공 대본을 생성하지 않았습니다.
 
@@ -112,7 +119,7 @@ npm run build
 npm run start:local
 ```
 
-명시적으로 선택한 **로컬 공연 입력**의 critical path에는 외부 API·CDN·웹 폰트가 없습니다. Node/Python 서버, 지원 브라우저(Web Locks/BroadcastChannel/Web Audio), OS 입력·디스플레이 장치는 필요합니다. 설치형 데스크톱 앱이나 서비스 워커 캐시는 아닙니다. Demo·ONLINE PREVIEW·Soniox 분석에는 오프라인 보장이 적용되지 않습니다.
+명시적으로 선택한 **로컬 공연 입력**의 critical path에는 외부 API·CDN·웹 폰트가 없습니다. Node/Python 서버, 지원 브라우저(Web Locks/BroadcastChannel/Web Audio), OS 입력·디스플레이 장치는 필요합니다. 설치형 데스크톱 앱이나 서비스 워커 캐시는 아닙니다. Demo·ONLINE PREVIEW·Groq/Soniox 분석에는 오프라인 보장이 적용되지 않습니다. Live online은 기존 Browser Web Speech, live offline은 준비된 Local ASR만 사용합니다.
 
 ## 검증과 배포 경계
 
@@ -126,6 +133,8 @@ npm run test:e2e
 ```
 
 실제 모델 통합 테스트는 사전 준비된 `STAGE_TEST_LOCAL_MODEL_DIR`, `STAGE_TEST_KOREAN_AUDIO`를 설정해야 실행됩니다. CI가 모델이나 비공개 녹음을 다운로드하지 않습니다. 브라우저 테스트의 ASR은 합성 데이터이며 실제 한국어 발화·가창 성능을 증명하지 않습니다.
+
+`.github/workflows/ci.yml`은 unit/typecheck/build/backend와 별도 E2E job을 실행합니다. Groq/Soniox는 모의 HTTP transport만 사용하며 키·비공개 오디오가 필요하지 않습니다. 로컬 검증과 GitHub에서 실제 실행된 status check는 구별합니다.
 
 Latency는 `음성→표시`, `인식→표시`, `수동→표시`를 구분하고 Operator는 **미리보기** 측정임을 명시합니다. 인식→표시는 ASR 대기 시간을 포함하지 않으며 HDMI/프로젝터의 물리적 표시 시간도 측정하지 않습니다.
 

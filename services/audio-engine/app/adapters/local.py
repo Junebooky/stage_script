@@ -58,11 +58,13 @@ class FasterWhisperProvider:
                     "id": str(segment.id), "text": segment.text.strip(),
                     "startMs": segment.start * 1000, "endMs": segment.end * 1000,
                     "confidence": min(1.0, max(0.0, math.exp(segment.avg_logprob))),
+                    "confidenceBasis": "segment-logprob-derived",
+                    "providerMetadata": {"avg_logprob": segment.avg_logprob, "no_speech_prob": segment.no_speech_prob},
                 }
                 if words:
                     item["words"] = [
                         {"text": word.word, "startMs": word.start * 1000,
-                         "endMs": word.end * 1000, "confidence": word.probability}
+                         "endMs": word.end * 1000, "confidence": word.probability, "confidenceBasis": "provider-native"}
                         for word in (segment.words or [])
                     ]
                 results.append(item)

@@ -2,7 +2,7 @@
 
 ## 불변 조건과 모드
 
-관객 내용은 canonical script 또는 지정된 로컬 IMAGE뿐입니다. ASR은 시점을 판정하는 evidence이며 Observation/Profile은 대본을 변경하지 않습니다. 명시적 로컬 공연 입력에는 LLM/cloud/CDN이 없습니다. 최신 사용자 요청에 따라 Operator 기본 입력은 기존 브라우저 ASR의 ONLINE PREVIEW이며 오프라인이라고 표시하지 않습니다. 리허설에는 opt-in Soniox 비동기 ASR을 추가했습니다.
+관객 내용은 canonical script 또는 지정된 로컬 IMAGE뿐입니다. ASR은 시점을 판정하는 evidence이며 Observation/Profile은 대본을 변경하지 않습니다. 명시적 로컬 공연 입력에는 LLM/cloud/CDN이 없습니다. Operator 기본 입력은 기존 브라우저 ASR의 ONLINE PREVIEW이며 오프라인이라고 표시하지 않습니다. 리허설 기본값은 opt-in Groq Whisper Large v3이고 Soniox와 Local을 대안으로 유지합니다. Groq를 LIVE 입력에 연결하지 않습니다.
 
 | 경계 | DEMO | PERFORMANCE_LOCAL |
 | --- | --- | --- |
@@ -108,6 +108,12 @@ AudioSource/LiveMicSource/FileReplaySource는 timestamped PCM 인터페이스와
 CLI는 설치된 Vite TS module runner를 서버 없이 사용해 실제 앱의 schema/alignment/replay를 실행합니다. Python은 먼저 WAV의 전체 PCM 프레임·메타데이터·SHA-256을 검사합니다. 원본을 변환·덮어쓰지 않고 새 UUID 디렉터리에만 결과를 남깁니다. 모델·키·동의 없음은 exit 2, observation 미생성입니다. CLI 분석과 UI 업로드 이력은 별도 보관됩니다.
 
 ### 외부 ASR 경계
+
+UI/Node CLI/Python API는 `data/asr-providers.json`의 provider/model/consent metadata를 공유하고 `rehearsal_providers.py`가 생성·동의·자격 증명 검사를 맡습니다. API 키 값은 서버 전용 `.env.local` 또는 process env에만 있습니다. 파일 로드는 서버 lifespan/CLI main에서만 하고 pytest/CI에는 금지합니다. 다른 provider로 자동 fallback하지 않습니다.
+
+Groq `whisper-large-v3`는 고정 `api.groq.com/openai/v1/audio/transcriptions`에 원본을 먼저 업로드합니다. 한국어, temperature 0, verbose_json, word+segment timestamps만 요청하며 canonical prompt는 없습니다. 크기 제한일 때만 원본 sample rate/channel을 유지하는 임시 lossless FLAC을 만들고 한 번 재시도합니다. FLAC도 거절되면 명시적으로 중단하며 lossy 변환·누락·부정확한 chunk offset을 만들지 않습니다. 원본 SHA-256, 변환 여부, request ID, 각 배치 요청 wall time, 임시 파일 정리를 감사하되 키/헤더는 제외합니다. 이 endpoint의 원격 삭제는 앱에서 지원할 수 없습니다. [명세](https://console.groq.com/docs/speech-to-text) · [보관 정책](https://console.groq.com/docs/your-data).
+
+Groq 단어 confidence가 없으면 null/unavailable입니다. Segment avg_logprob는 exp로 변환하되 segment-logprob-derived로 표시합니다. 단어에 segment 값을 복사하지 않습니다. Matcher는 누락 ASR 항을 빼고 남은 가중치를 재정규화하며, offline alignment는 text-sequence-only 근거를 표시합니다. 약한 segment confidence나 높은 no_speech_prob는 검토 대상입니다. 경계를 넘거나 겹치거나 텍스트가 불일치하는 word timestamp는 원 응답에 보존하되 보간 시각을 정확한 단어 시각처럼 사용하지 않습니다.
 
 Soniox `stt-async-v5`는 서버 `SONIOX_API_KEY`와 명시적 업로드 동의가 모두 필요합니다. 고정 미국 endpoint/redirect 금지/키 비노출, generic 파일명으로 raw upload → job → bounded poll → tokens를 받습니다. canonical 문구·번역·정답 prompt를 보내지 않습니다. 한국어 subword를 공백 단위로 먼저 합치고 음향 pause/문장 끝으로 span을 만듭니다. 단어 시각이 겹치면 시각을 조작하지 않고 span-only로 내려 검토 대상으로 둡니다. `cloud-asr-pseudo`와 `local-asr-pseudo`를 구분합니다.
 

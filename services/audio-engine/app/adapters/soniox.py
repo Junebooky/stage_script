@@ -56,7 +56,7 @@ def token_segments(tokens: list[dict[str, Any]]) -> list[dict[str, Any]]:
             return
         segment = {"id": f"soniox-{len(segments)}", "text": " ".join(item["text"] for item in words),
                    "startMs": min(item["startMs"] for item in words), "endMs": max(item["endMs"] for item in words),
-                   "confidence": min(item["confidence"] for item in words)}
+                   "confidence": min(item["confidence"] for item in words), "confidenceBasis": "provider-native"}
         if all(left["endMs"] <= right["startMs"] for left, right in zip(words, words[1:])):
             segment["words"] = list(words)
         segments.append(segment)
@@ -92,7 +92,7 @@ def token_segments(tokens: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 word.update(text=word["text"] + piece, startMs=min(word["startMs"], start),
                             endMs=max(word["endMs"], end), confidence=min(word["confidence"], confidence))
             else:
-                word = {"text": piece, "startMs": start, "endMs": end, "confidence": confidence}
+                word = {"text": piece, "startMs": start, "endMs": end, "confidence": confidence, "confidenceBasis": "provider-native"}
     flush_span()
     return sorted(segments, key=lambda segment: segment["startMs"])
 

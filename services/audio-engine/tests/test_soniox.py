@@ -99,4 +99,4 @@ def test_cli_external_missing_key_writes_inspection_not_fake_asr(tmp_path, monke
     assert analyze_audio(audio, output, asr_provider="soniox", allow_cloud_upload=True) == 2
     assert {path.name for path in output.iterdir()} == {"inspection.json", "status.json"}
     status = json.loads((output / "status.json").read_text())
-    assert status["status"] == "EXTERNAL ASR UNAVAILABLE" and not status["realASRRan"]
+    assert status["status"] == "SONIOX ASR UNAVAILABLE" and not status["realASRRan"]

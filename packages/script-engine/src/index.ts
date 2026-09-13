@@ -409,7 +409,7 @@ export class ScriptFollowingEngine {
   }
 
   private fallbackCandidate(hypothesis: StreamingHypothesis, normalized: string) {
-    if (!hypothesis.speechActive || hypothesis.confidence < 0.35 || normalized.length - this.cursor.floor < 3) return null;
+    if (!hypothesis.speechActive || hypothesis.confidence === null || !Number.isFinite(hypothesis.confidence) || hypothesis.confidence < 0.35 || normalized.length - this.cursor.floor < 3) return null;
     return this.fallbackReadiness(hypothesis.receivedAt);
   }
 

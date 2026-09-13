@@ -101,14 +101,14 @@ export function replayRehearsal(show: Show, analysis: RehearsalAnalysis, profile
     if (!engine) continue;
     runControls(segment.startMs);
     engine.speechStart(segment.startMs);
-    const words = segment.words?.length ? segment.words : [{ text: segment.text, startMs: segment.startMs, endMs: segment.endMs, confidence: segment.confidence }];
+    const words = segment.words?.length ? segment.words : [{ text: segment.text, startMs: segment.startMs, endMs: segment.endMs, confidence: segment.confidence, confidenceBasis: segment.confidenceBasis }];
     let partial = "";
     words.forEach((word, index) => {
       partial += `${partial ? " " : ""}${word.text}`;
       const atMs = segment.receivedAtMs ?? word.endMs;
       runControls(atMs);
       const previous = engine.snapshot().lastTrigger;
-      engine.processHypothesis({ text: partial, confidence: word.confidence, receivedAt: atMs, speechActive: true,
+      engine.processHypothesis({ text: partial, confidence: word.confidence, confidenceBasis: word.confidenceBasis, receivedAt: atMs, speechActive: true,
         utteranceId: `replay:${segment.id}`, isFinal: index === words.length - 1 });
       capture(engine, previous);
     });

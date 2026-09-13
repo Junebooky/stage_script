@@ -50,8 +50,8 @@ def test_cli_stops_at_unavailable_boundary_without_fabricated_observations(tmp_p
     output.mkdir()
     def unavailable():
         raise LocalASRUnavailable("fixture: no model; never download")
-    monkeypatch.setattr("app.rehearsal_cli.get_local_provider", unavailable)
-    assert analyze_audio(audio, output) == 2
+    monkeypatch.setattr("app.rehearsal_providers.get_local_provider", unavailable)
+    assert analyze_audio(audio, output, asr_provider="local") == 2
     assert {path.name for path in output.iterdir()} == {"inspection.json", "status.json"}
     assert json.loads((output / "status.json").read_text())["realASRRan"] is False
 
@@ -65,8 +65,8 @@ def test_cli_local_provider_contract_keeps_asr_separate_from_canonical(tmp_path,
         def transcribe(self, path, *, words):
             assert Path(path) == audio and words is True
             return [{"id": "0", "text": "배우가 실제로 말한 문장", "startMs": 0, "endMs": 5, "confidence": 0.9}]
-    monkeypatch.setattr("app.rehearsal_cli.get_local_provider", lambda: FixtureProvider())
+    monkeypatch.setattr("app.rehearsal_providers.get_local_provider", lambda: FixtureProvider())
     before = sha256_file(audio)
-    assert analyze_audio(audio, output) == 0
+    assert analyze_audio(audio, output, asr_provider="local") == 0
     assert json.loads((output / "observation.json").read_text())["transcript"][0]["text"] == "배우가 실제로 말한 문장"
     assert sha256_file(audio) == before

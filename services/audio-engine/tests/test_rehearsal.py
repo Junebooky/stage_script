@@ -21,13 +21,13 @@ class FixtureProvider:
 @pytest.fixture
 def local_client(tmp_path, monkeypatch):
     monkeypatch.setenv("STAGE_DATA_DIR", str(tmp_path / "private-recordings"))
-    monkeypatch.setattr("app.rehearsal.get_local_provider", lambda: FixtureProvider())
+    monkeypatch.setattr("app.rehearsal_providers.get_local_provider", lambda: FixtureProvider())
     with TestClient(app) as client:
         yield client
 
 
 def upload(client):
-    response = client.post("/rehearsals?filename=original.wav&showId=fixture-show", content=wav_bytes(), headers={"Content-Type": "audio/wav"})
+    response = client.post("/rehearsals?provider=local&filename=original.wav&showId=fixture-show", content=wav_bytes(), headers={"Content-Type": "audio/wav"})
     assert response.status_code == 202
     return response.json()["id"]
 
@@ -54,7 +54,7 @@ def test_raw_audio_upload_transcribe_poll_result_and_review_audio(local_client) 
 def test_known_number_history_analysis_and_profiles_never_mix(local_client):
     ids = []
     for number in ("test-one", "test-two"):
-        response = local_client.post(f"/rehearsals?filename=original.wav&showId=fixture-show&numberId={number}", content=wav_bytes())
+        response = local_client.post(f"/rehearsals?provider=local&filename=original.wav&showId=fixture-show&numberId={number}", content=wav_bytes())
         assert response.status_code == 202
         identifier = response.json()["id"]
         ids.append(identifier)
@@ -98,14 +98,14 @@ def test_analysis_is_separate_and_revisions_persist_without_touching_raw_audio(l
 
 
 def test_upload_rejects_missing_model_invalid_format_empty_and_oversize(local_client, monkeypatch) -> None:
-    assert local_client.post("/rehearsals?filename=notes.txt", content=b"text").status_code == 415
-    assert local_client.post("/rehearsals?filename=empty.wav", content=b"").status_code == 400
+    assert local_client.post("/rehearsals?provider=local&filename=notes.txt", content=b"text").status_code == 415
+    assert local_client.post("/rehearsals?provider=local&filename=empty.wav", content=b"").status_code == 400
     monkeypatch.setenv("STAGE_MAX_AUDIO_BYTES", "10")
-    assert local_client.post("/rehearsals?filename=big.wav", content=wav_bytes()).status_code == 413
+    assert local_client.post("/rehearsals?provider=local&filename=big.wav", content=wav_bytes()).status_code == 413
     monkeypatch.delenv("STAGE_LOCAL_MODEL_DIR", raising=False)
     from app.adapters.local import get_local_provider
-    monkeypatch.setattr("app.rehearsal.get_local_provider", get_local_provider)
-    assert local_client.post("/rehearsals?filename=audio.wav", content=wav_bytes()).status_code == 503
+    monkeypatch.setattr("app.rehearsal_providers.get_local_provider", get_local_provider)
+    assert local_client.post("/rehearsals?provider=local&filename=audio.wav", content=wav_bytes()).status_code == 503
 
 
 def metric(**overrides):
@@ -149,7 +149,7 @@ def test_challenger_does_not_replace_champion_until_operator_confirms_all_histor
 
 
 def test_local_recording_paths_cannot_be_injected_via_filenames_or_manifest(local_client) -> None:
-    response = local_client.post("/rehearsals?filename=../../private.wav&showId=fixture-show", content=wav_bytes())
+    response = local_client.post("/rehearsals?provider=local&filename=../../private.wav&showId=fixture-show", content=wav_bytes())
     identifier = response.json()["id"]
     manifest_path = artifact_path("rehearsals", identifier, "manifest.json")
     manifest = read_json(manifest_path)

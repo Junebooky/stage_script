@@ -10,8 +10,8 @@ import json
 import time
 from pathlib import Path
 
-from .adapters.local import LocalASRUnavailable, get_local_provider
-from .adapters.soniox import ExternalASRUnavailable, SonioxProvider
+from .rehearsal_providers import DEFAULT_PROVIDER, PROVIDERS, UNAVAILABLE_ERRORS, get_rehearsal_provider, provider_metadata, provider_audit, cleanup_warning, unavailable_status
+from .environment import load_backend_environment
 from .inspection import inspect_wav, sha256_file
 
 
@@ -22,7 +22,7 @@ def write_artifact(directory: Path, filename: str, value: dict) -> None:
 
 
 def analyze_audio(audio: Path, output: Path, *, inspect_only: bool = False,
-                  asr_provider: str = "local", allow_cloud_upload: bool = False) -> int:
+                  asr_provider: str = DEFAULT_PROVIDER, allow_cloud_upload: bool = False) -> int:
     try:
         inspection = inspect_wav(audio)
         write_artifact(output, "inspection.json", inspection)
@@ -34,11 +34,10 @@ def analyze_audio(audio: Path, output: Path, *, inspect_only: bool = False,
         write_artifact(output, "status.json", {"status": "INSPECTION ONLY", "realASRRan": False})
         return 0
     try:
-        if asr_provider not in {"local", "soniox"}:
-            raise ExternalASRUnavailable("Unknown ASR provider")
-        provider = SonioxProvider(allow_cloud_upload=allow_cloud_upload) if asr_provider == "soniox" else get_local_provider()
-    except (LocalASRUnavailable, ExternalASRUnavailable) as error:
-        status = "EXTERNAL ASR UNAVAILABLE" if asr_provider != "local" else "LOCAL ASR UNAVAILABLE"
+        metadata = provider_metadata(asr_provider)
+        provider = get_rehearsal_provider(asr_provider, allow_cloud_upload)
+    except (*UNAVAILABLE_ERRORS, ValueError) as error:
+        status = unavailable_status(asr_provider)
         write_artifact(output, "status.json", {"status": status, "reason": str(error),
             "realASRRan": False, "observationStatus": "NOT GENERATED", "metricsStatus": "NOT MEASURED",
             "candidateStatus": "NOT GENERATED", "productionReady": False})
@@ -50,7 +49,7 @@ def analyze_audio(audio: Path, output: Path, *, inspect_only: bool = False,
         elapsed = (time.perf_counter() - began) * 1000
         if sha256_file(audio) != inspection["sha256Before"]:
             raise ValueError("Original recording changed during ASR")
-        write_artifact(output, "observation.json", {"provider": provider.name, "transcript": transcript,
+        write_artifact(output, "observation.json", {"provider": provider.name, "model": metadata["model"], "asrProvider": asr_provider, "transcript": transcript,
             "timestampBasis": getattr(provider, "timestamp_basis", "local-asr-pseudo"), "transcriptionWallTimeMs": elapsed,
             "liveLatencyMeasured": False, "audioSha256": inspection["sha256Before"]})
         write_artifact(output, "status.json", {"status": "ASR COMPLETE", "realASRRan": True,
@@ -60,10 +59,11 @@ def analyze_audio(audio: Path, output: Path, *, inspect_only: bool = False,
         write_artifact(output, "status.json", {"status": "ASR FAILED", "reason": str(error), "realASRRan": False, "attempted": True, "productionReady": False})
         return 1
     finally:
-        if isinstance(provider, SonioxProvider):
-            write_artifact(output, "external-asr.json", {**provider.audit, "rawResult": provider.raw_result})
-            if any(not item["deleted"] for item in provider.audit["cleanup"]):
-                print("WARNING: Remote cleanup incomplete. See external-asr.json; the local original is retained.", flush=True)
+        audit = provider_audit(provider)
+        if audit is not None:
+            write_artifact(output, "external-asr.json", audit)
+        if warning := cleanup_warning(audit):
+            print(warning, flush=True)
 
 
 def main() -> int:
@@ -71,11 +71,12 @@ def main() -> int:
     parser.add_argument("--audio", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--inspect-only", action="store_true")
-    parser.add_argument("--provider", choices=["local", "soniox"], default="local")
+    parser.add_argument("--provider", choices=list(PROVIDERS), default=DEFAULT_PROVIDER)
     parser.add_argument("--allow-cloud-upload", action="store_true")
     args = parser.parse_args()
     if not args.output.is_dir() or any(args.output.iterdir()):
         parser.error("Output must be a new empty run directory")
+    load_backend_environment()
     return analyze_audio(args.audio, args.output, inspect_only=args.inspect_only,
                          asr_provider=args.provider, allow_cloud_upload=args.allow_cloud_upload)
 
