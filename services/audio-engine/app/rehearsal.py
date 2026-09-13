@@ -101,11 +101,12 @@ async def transcribe_rehearsal(identifier: str) -> None:
             raise ValueError("Original audio changed during transcription")
         # Acoustic timestamps originate in ASR, not in canonical show text.
         elapsed = (time.perf_counter() - began) * 1000
+        transcription_ms = getattr(provider, "audit", {}).get("transcriptionWallTimeMs", elapsed)
         result = {"rehearsalId": identifier, "provider": provider.name, "model": metadata["model"], "asrProvider": selected,
-                  "transcriptionWallTimeMs": elapsed, "audioSha256": before, "liveLatencyMeasured": False,
+                  "transcriptionWallTimeMs": transcription_ms, "pipelineWallTimeMs": elapsed, "audioSha256": before, "liveLatencyMeasured": False,
                   "timestampBasis": getattr(provider, "timestamp_basis", "local-asr-pseudo"), "transcript": transcript}
         write_json(manifest_path.parent / "transcript.json", result)
-        manifest.update(status="complete", provider=provider.name, model=metadata["model"], transcriptionWallTimeMs=elapsed, completedAt=time.time() * 1000,
+        manifest.update(status="complete", provider=provider.name, model=metadata["model"], transcriptionWallTimeMs=transcription_ms, completedAt=time.time() * 1000,
                         transcriptCount=len(transcript), lastSpeechEndMs=max((item["endMs"] for item in transcript), default=0))
     except Exception as error:
         manifest.update(status="failed", error=str(error), completedAt=time.time() * 1000)

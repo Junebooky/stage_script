@@ -11,6 +11,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.adapters.groq import GroqASRError, GroqProvider, normalize_verbose
+from app.adapters.groq_transport import prepare_transport, probe
 from app.adapters.soniox import ExternalASRUnavailable, SonioxProvider
 from app.inspection import sha256_file
 from app.main import app
@@ -86,8 +87,8 @@ def test_actual_multipart_contract_and_immutable_original(audio, monkeypatch):
         assert body.count(b'name="timestamp_granularities[]"') == 2
         assert b"word" in body and b"segment" in body
         assert b'name="prompt"' not in body and b"M05-2" not in body
-        assert b"private original" not in body and b'filename="recording.wav"' in body
-        assert audio.read_bytes() in body
+        assert b"private original" not in body and b'filename="recording.flac"' in body
+        assert b"fLaC" in body and b'filename="recording.wav"' not in body
         return httpx.Response(200, json=verbose(), headers={"x-request-id": "fixture-id"})
     instance = provider(monkeypatch, handler)
     assert instance.transcribe(str(audio))[1]["text"] == "길을 열어 주오"
@@ -95,10 +96,13 @@ def test_actual_multipart_contract_and_immutable_original(audio, monkeypatch):
     assert instance.audit["attempts"][0]["requestId"] == "fixture-id"
     assert instance.audit["xGroq"] == {"id": "request-fixture"}
     assert instance.audit["remoteDeletion"] == "not-exposed-by-transcription-endpoint"
+    assert instance.audit["transport"]["derived"]["sampleRate"] == 16000
+    assert instance.audit["transport"]["derived"]["channels"] == 1
+    assert instance.audit["transport"]["durationVerified"]
     assert TEST_CREDENTIAL not in json.dumps(instance.audit)
 
 
-@pytest.mark.parametrize("status", [401, 403, 429, 500, 503])
+@pytest.mark.parametrize("status", [401, 403, 413, 429, 500, 503])
 def test_error_responses_never_echo_secrets_or_retry(audio, monkeypatch, status):
     calls = []
     def handler(request):
@@ -131,36 +135,70 @@ def test_unexpected_success_metadata_is_redacted(audio, monkeypatch):
 
 
 @pytest.mark.skipif(not shutil.which("ffmpeg"), reason="lossless transport verification requires ffmpeg")
-def test_size_rejection_retries_lossless_flac_only_then_removes_temporary_file(audio, monkeypatch):
+def test_prepares_flac_before_only_upload_then_removes_temporary_file(audio, monkeypatch):
     attempts = []
     def handler(request):
         body = request.read()
         attempts.append(body)
-        if len(attempts) == 1:
-            return httpx.Response(413)
         assert b'filename="recording.flac"' in body and b"fLaC" in body
         return httpx.Response(200, json=verbose())
     instance = provider(monkeypatch, handler)
     instance.transcribe(str(audio))
-    assert len(attempts) == 2 and instance.audit["derivedFileUsed"]
+    assert len(attempts) == 1 and instance.audit["derivedFileUsed"]
     assert instance.audit["temporaryTransportRemoved"] and instance.audit["originalUnchanged"]
     assert all(attempt["timelineOffsetMs"] == 0 for attempt in instance.audit["attempts"])
 
 
 @pytest.mark.skipif(not shutil.which("ffmpeg"), reason="lossless transport verification requires ffmpeg")
-def test_failed_flac_retry_still_removes_temporary_transport(audio, monkeypatch):
+def test_failed_flac_request_still_removes_temporary_transport(audio, monkeypatch):
     calls = []
     def handler(request):
         calls.append(request)
-        if len(calls) == 1:
-            return httpx.Response(413)
         raise httpx.ReadTimeout(TEST_CREDENTIAL, request=request)
     instance = provider(monkeypatch, handler)
     with pytest.raises(GroqASRError, match="timed out"):
         instance.transcribe(str(audio))
-    assert len(calls) == 2
+    assert len(calls) == 1
     assert instance.audit["temporaryTransportRemoved"] and instance.audit["originalUnchanged"]
     assert TEST_CREDENTIAL not in json.dumps(instance.audit)
+
+
+def test_oversize_flac_stops_before_network_without_chunking(audio, monkeypatch):
+    def oversized(original, derived):
+        audit = prepare_transport(original, derived)
+        audit["bytes"] = 25_000_001
+        return audit
+    monkeypatch.setattr("app.adapters.groq.prepare_transport", oversized)
+    instance = provider(monkeypatch, lambda _: pytest.fail("Oversized file must not be uploaded"))
+    with pytest.raises(GroqASRError, match="exceeds 25 MB"):
+        instance.transcribe(str(audio))
+    assert instance.audit["attempts"] == []
+    assert instance.audit["temporaryTransportRemoved"] and instance.audit["originalUnchanged"]
+
+
+def test_changed_duration_stops_before_network(audio, monkeypatch):
+    def changed_probe(path):
+        info = probe(path)
+        if path.suffix == ".flac":
+            info["durationMs"] += 100
+        return info
+    monkeypatch.setattr("app.adapters.groq_transport.probe", changed_probe)
+    instance = provider(monkeypatch, lambda _: pytest.fail("Changed timeline must not be uploaded"))
+    with pytest.raises(GroqASRError, match="duration verification failed"):
+        instance.transcribe(str(audio))
+    assert instance.audit["attempts"] == [] and instance.audit["temporaryTransportRemoved"]
+
+
+def test_resampling_preserves_full_timeline_within_one_output_sample(audio, tmp_path):
+    # The fixture is 48 kHz, stereo, 24-bit PCM; real FFmpeg conversion, no API.
+    before = sha256_file(audio)
+    audit = prepare_transport(audio, tmp_path / "analysis.flac")
+    assert audit["original"]["sampleRate"] == 48000 and audit["original"]["channels"] == 2
+    assert audit["derived"]["sampleRate"] == 16000 and audit["derived"]["channels"] == 1
+    assert audit["durationDeltaMs"] == 0
+    assert audit["timelineOffsetMs"] == 0 and audit["fullDecodeSuccess"]
+    assert audit["bytes"] <= 25_000_000 and not audit["chunked"]
+    assert sha256_file(audio) == before
 
 
 def test_provider_selection_is_centralized_and_no_silent_fallback(monkeypatch):

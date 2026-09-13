@@ -4,8 +4,6 @@ from __future__ import annotations
 import math
 import os
 import re
-import shutil
-import subprocess
 import tempfile
 import time
 from pathlib import Path
@@ -14,6 +12,7 @@ from typing import Any
 import httpx
 
 from .soniox import ExternalASRUnavailable
+from .groq_transport import MAX_UPLOAD_BYTES, TransportError, prepare_transport
 from ..inspection import sha256_file
 
 MODEL = "whisper-large-v3"
@@ -117,16 +116,6 @@ class GroqProvider:
             "attempts": [], "cleanup": [], "remoteDeletion": "not-exposed-by-transcription-endpoint",
             "privacyPolicy": "https://console.groq.com/docs/your-data", "liveLatencyMeasured": False}
 
-    @staticmethod
-    def _size_rejected(response: httpx.Response) -> bool:
-        if response.status_code == 413:
-            return True
-        if response.status_code != 400:
-            return False
-        # Inspect, never log, provider error text. Never retry auth/quota/timeouts.
-        message = response.text.lower()
-        return ("file" in message or "audio" in message) and any(term in message for term in ("too large", "size limit", "maximum size", "max file size", "payload too large"))
-
     def _request(self, client: httpx.Client, path: Path, *, derived: bool = False) -> httpx.Response:
         attempt = {"transportFormat": path.suffix.lower().lstrip("."), "bytes": path.stat().st_size,
                    "derived": derived, "timelineOffsetMs": 0}
@@ -157,31 +146,22 @@ class GroqProvider:
         began = time.perf_counter()
         derived: Path | None = None
         try:
-            with httpx.Client(headers={"Authorization": f"Bearer {self._key}"},
+            with tempfile.TemporaryDirectory(prefix="cueflow-groq-transport-") as directory:
+                derived = Path(directory) / "transport.flac"
+                try:
+                    transport_audit = prepare_transport(original, derived)
+                except TransportError as error:
+                    raise GroqASRError(str(error)) from None
+                self.audit.update(derivedFileUsed=True, transport=transport_audit,
+                    derivation="16000 Hz mono PCM encoded as lossless FLAC; no trim or time shift", timelineOffsetMs=0)
+                if transport_audit["bytes"] > MAX_UPLOAD_BYTES:
+                    raise GroqASRError(f"Prepared FLAC exceeds 25 MB ({transport_audit['bytes']} bytes); no upload, chunking or fallback performed.")
+                if sha256_file(original) != before:
+                    raise GroqASRError("Original changed during preparation; no upload performed.")
+                with httpx.Client(headers={"Authorization": f"Bearer {self._key}"},
                               timeout=httpx.Timeout(300, connect=20), follow_redirects=False,
                               trust_env=False, transport=self._transport) as client:
-                response = self._request(client, original)
-                if self._size_rejected(response):
-                    if not shutil.which("ffmpeg"):
-                        raise GroqASRError("Groq rejected original file size. Install ffmpeg for a lossless FLAC transport retry.")
-                    with tempfile.TemporaryDirectory(prefix="cueflow-groq-transport-") as directory:
-                        derived = Path(directory) / "transport.flac"
-                        # No resampling, downmixing, trimming, timestamps shift, or MP3.
-                        # FFmpeg defaults preserve input sample rate/channel layout.
-                        try:
-                            subprocess.run(["ffmpeg", "-nostdin", "-v", "error", "-i", str(original),
-                                "-map", "0:a:0", "-map_metadata", "-1", "-c:a", "flac", "-compression_level", "8", str(derived)],
-                                check=True, capture_output=True, timeout=180)
-                        except (subprocess.SubprocessError, OSError):
-                            raise GroqASRError("Lossless FLAC transport conversion failed; original retained.") from None
-                        self.audit.update(derivedFileUsed=True, derivation="lossless FLAC, original sample rate/channels, no trim", timelineOffsetMs=0)
-                        try:
-                            response = self._request(client, derived, derived=True)
-                        finally:
-                            self.audit["temporaryTransportCleanup"] = "managed-temporary-directory"
-                    self.audit["temporaryTransportRemoved"] = not derived.exists()
-                    if self._size_rejected(response):
-                        raise GroqASRError("Groq also rejected lossless FLAC size. Exact-offset chunking is required; no lossy conversion or silent truncation performed.")
+                    response = self._request(client, derived, derived=True)
                 if not 200 <= response.status_code < 300:
                     raise GroqASRError(f"Groq HTTP {response.status_code}; check credentials, permissions, rate limits or provider availability.")
                 try:
@@ -197,7 +177,8 @@ class GroqProvider:
         finally:
             if derived is not None:
                 self.audit["temporaryTransportRemoved"] = not derived.exists()
-            self.audit["transcriptionWallTimeMs"] = (time.perf_counter() - began) * 1000
+            self.audit["pipelineWallTimeMs"] = (time.perf_counter() - began) * 1000
+            self.audit["transcriptionWallTimeMs"] = sum(attempt["wallTimeMs"] for attempt in self.audit["attempts"])
             self.audit["originalUnchanged"] = sha256_file(original) == before
             if not self.audit["originalUnchanged"]:
                 raise GroqASRError("Original recording changed during Groq transcription")

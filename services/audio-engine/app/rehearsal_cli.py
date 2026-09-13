@@ -50,7 +50,8 @@ def analyze_audio(audio: Path, output: Path, *, inspect_only: bool = False,
         if sha256_file(audio) != inspection["sha256Before"]:
             raise ValueError("Original recording changed during ASR")
         write_artifact(output, "observation.json", {"provider": provider.name, "model": metadata["model"], "asrProvider": asr_provider, "transcript": transcript,
-            "timestampBasis": getattr(provider, "timestamp_basis", "local-asr-pseudo"), "transcriptionWallTimeMs": elapsed,
+            "timestampBasis": getattr(provider, "timestamp_basis", "local-asr-pseudo"),
+            "transcriptionWallTimeMs": getattr(provider, "audit", {}).get("transcriptionWallTimeMs", elapsed), "pipelineWallTimeMs": elapsed,
             "liveLatencyMeasured": False, "audioSha256": inspection["sha256Before"]})
         write_artifact(output, "status.json", {"status": "ASR COMPLETE", "realASRRan": True,
             "productionReady": False, "transcriptCount": len(transcript), "originalUnchanged": True})

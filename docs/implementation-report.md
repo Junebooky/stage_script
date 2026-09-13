@@ -1,6 +1,6 @@
 # 구현 보고서 — implemention_plan.md / ref_new.tsx
 
-최신 확장은 [Groq 구현·검증 보고서](groq-rehearsal-report.md)에 기록했습니다. 리허설 기본 provider는 Groq Whisper Large v3이며 Soniox/Local과 기존 live 입력을 보존합니다. 아래 내용은 이전 단계의 구현 기록입니다. 실제 M05-2 Groq 전사는 특정 녹음 업로드 승인 대기 상태이며 새 음향 성능 수치를 주장하지 않습니다.
+최신 확장은 [Groq 구현·검증 보고서](groq-rehearsal-report.md)에 기록했습니다. 리허설 기본 provider는 Groq Whisper Large v3이며 Soniox/Local과 기존 live 입력을 보존합니다. 승인된 16kHz mono FLAC으로 M05-2 실제 전사 1회가 성공했습니다. 기계 정렬 28/36, 미관측 8, 검토 큐 8이며 기준 matcher 대비 후보 replay 개선은 없습니다. 아래 내용은 이전 단계의 구현 기록이고, 실제 공연 정확도·저지연 보장으로 해석하면 안 됩니다.
 
 검증일: 2026-09-12. 기존 데모를 유지하면서 로컬 공연 runtime, 관객 출력, 리허설 보정 경로를 구현했습니다. **실제 공연 승인 완료 또는 실측 저지연 보장 상태는 아닙니다.**
 

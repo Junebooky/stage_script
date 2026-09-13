@@ -82,7 +82,7 @@ export function formatASRBenchmarkReport(report: ReturnType<typeof buildASRBench
     section(2, "원본 WAV", json(report.inspection)),
     section(3, "전사 wall time", `${report.transcriptionWallTimeMs.toFixed(1)} ms — 배치 요청 처리 시간이며 live latency가 아닙니다.`),
     section(4, "ASR segments", String(report.segmentCount)),
-    section(5, "단어 시각·신뢰도", `${report.wordCount} words, ${report.segmentsWithWordTimestamps}/${report.segmentCount} spans.\n${json(report.wordConfidence)}신뢰도 unavailable은 null이며 임의 숫자를 넣지 않았습니다.`),
+    section(5, "단어 시각·신뢰도", `정규화 후 채택된 ${report.wordCount} words, ${report.segmentsWithWordTimestamps}/${report.segmentCount} spans. 원응답 전체 단어 수는 external-asr.json의 rawResult.words를 확인하세요.\n${json(report.wordConfidence)}신뢰도 unavailable은 null이며 임의 숫자를 넣지 않았습니다.`),
     section(6, "인식 전사 요약", json(report.transcriptQuality.summary)),
     section(7, "Canonical cues", String(report.canonicalCueCount)),
     section(8, "정렬 큐", `${report.alignedCueCount} unique cues / ${report.observationCount} observations; machine coverage ${report.canonicalCueCoverage === null ? "N/A" : (report.canonicalCueCoverage * 100).toFixed(1) + "%"}`),
