@@ -1,4 +1,7 @@
 export * from "./types";
+export * from "./recording-profile";
+export * from "./realtime-replay";
+export * from "./recording-evaluation";
 export { analyzeNumberRehearsal } from "./number-alignment";
 export { compareCandidate } from "./comparison";
 export { buildASRBenchmark, formatASRBenchmarkReport, type BatchObservationMetadata } from "./benchmark";

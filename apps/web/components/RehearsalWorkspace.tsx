@@ -7,6 +7,7 @@ import { analyzeNumberRehearsal, buildCueProfiles, canonicalFingerprint, confirm
 import { localBackendUrl, localRequest, downloadJSON } from "@/lib/local-runtime";
 import { readSelectedShow, storeSelectedShow } from "@/lib/show-storage";
 import { ProductionSelector } from "./ProductionSelector";
+import { RecordingReplay } from "./RecordingReplay";
 import asrCatalog from "../../../data/asr-providers.json";
 
 interface Manifest { id: string; filename: string; showId: string; numberId?: string; status: string; error?: string; warning?: string; durationMs?: number; asrProvider?: string; provider?: string; providerDisplayName?: string; model?: string }
@@ -195,6 +196,7 @@ function RehearsalSession({ show, catalog, numberId, onNumber, onShow }: { show:
           </div> : <p className="empty-state">최소 3회 이력, 미해결 검토 없음, 모든 지표 무회귀와 개선을 확인한 뒤에만 승격을 권장합니다.</p>}
         </section>
       </div>
+      <RecordingReplay show={show} numberId={numberId} onStart={() => audioRef.current?.pause()} />
     </main>
   );
 }

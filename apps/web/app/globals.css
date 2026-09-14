@@ -432,3 +432,29 @@ select, input { color: inherit; background: #0d1722; border: 1px solid var(--lin
   .upload-panel, .analysis-panel { padding: 18px; }
   .upload-panel input { max-width: 100%; }
 }
+/* Recording-scoped replay. Operator/Audience layouts and transport stay intact. */
+.replay-panel { margin-top: 28px; padding: 28px; border: 1px solid #35394a; border-radius: 18px; background: #11131b; }
+.replay-panel h2 { margin: 12px 0; }
+.replay-title, .replay-controls, .replay-time { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 18px 0; }
+.replay-title { justify-content: space-between; }
+.replay-title span, .replay-time time { font-variant-numeric: tabular-nums; color: #c2b8ff; }
+.replay-controls button, .replay-panel > button, .replay-evaluation button { padding: 10px 14px; border: 1px solid #505367; border-radius: 8px; background: #222533; color: #f1f0f8; cursor: pointer; }
+.replay-panel button:disabled { opacity: .4; cursor: not-allowed; }
+.replay-panel button:focus-visible, .replay-panel a:focus-visible, .replay-panel summary:focus-visible { outline: 2px solid #b8a9ff; outline-offset: 4px; }
+.replay-time progress { flex: 1; min-width: 100px; accent-color: #b9a7ff; }
+.replay-columns { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 20px; }
+.replay-stage, .replay-evidence { min-width: 0; padding: 20px; border: 1px solid #333748; border-radius: 12px; }
+.replay-stage { background: #08090d; }
+.replay-stage .caption-card { min-height: 150px; position: relative; padding: 30px 5px; }
+.replay-stage .caption-line p { font-size: clamp(20px, 2.3vw, 34px); }
+.replay-evidence > p { min-height: 80px; color: #bcb9ca; overflow-wrap: anywhere; }
+.replay-details { font-size: 13px; display: grid; gap: 12px; }
+.replay-details > div { display: flex; justify-content: space-between; gap: 15px; }
+.replay-details dt { color: #a5a7b6; }
+.replay-details dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+.replay-evaluation { margin-top: 16px; }
+.replay-evaluation summary { cursor: pointer; }
+.replay-table-scroll { overflow-x: auto; margin: 16px 0; }
+.replay-evaluation table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.replay-evaluation th, .replay-evaluation td { padding: 10px; border-bottom: 1px solid #363a48; text-align: left; }
+@media (max-width: 800px) { .replay-panel { padding: 18px; } .replay-columns { grid-template-columns: 1fr; } }

@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "recordingId": "R001-M05-2",
+  "showId": "decadence-gyeongseong",
+  "numberId": "M05-2",
+  "canonicalFingerprint": "0d6009c3",
+  "sourceAudioPath": "recordings/decadence-gyeongseong/R001/M05-2/M5-2_외로운별 _0420.wav",
+  "sourceAudioSha256": "2b7ce5887f92a5527f4dca1564d00aa2c95eb834ca2e0d6d06189b4588cdb5e7",
+  "performedCueIds": [
+    "M05-2_C001", "M05-2_C002", "M05-2_C003", "M05-2_C004", "M05-2_C005", "M05-2_C006", "M05-2_C007", "M05-2_C008",
+    "M05-2_C018", "M05-2_C019", "M05-2_C020", "M05-2_C021", "M05-2_C022", "M05-2_C023", "M05-2_C024", "M05-2_C025",
+    "M05-2_C026", "M05-2_C027", "M05-2_C028", "M05-2_C029", "M05-2_C030", "M05-2_C031", "M05-2_C032", "M05-2_C033",
+    "M05-2_C034", "M05-2_C035", "M05-2_C036"
+  ],
+  "absentCueIds": ["M05-2_C009", "M05-2_C010", "M05-2_C011", "M05-2_C012", "M05-2_C013", "M05-2_C014", "M05-2_C015", "M05-2_C016", "M05-2_C017"],
+  "omissionBasis": "User-confirmed R001 recording omission of section B; not a canonical or live-engine skip rule.",
+  "asrEvidenceSource": {
+    "kind": "saved-provider-result",
+    "runId": "run-167571f2-8599-40db-9f76-b24dcf08c5c9",
+    "provider": "groq",
+    "model": "whisper-large-v3",
+    "path": ".stage-data/number-analysis/run-167571f2-8599-40db-9f76-b24dcf08c5c9/external-asr.json",
+    "sha256": "df3d8128e169e87775653955c3f6405744964af40dbc04b70edbd614ba30d5cf",
+    "wordConfidence": "unavailable",
+    "liveLatencyMeasured": false
+  },
+  "nonCanonicalEvents": [{ "type": "POST_TAKE_SPEECH", "startMs": 223709, "endMs": 224409, "text": "감사합니다.", "note": "Diagnostic only. The prior machine assignment to absent C016 is invalid." }]
+}

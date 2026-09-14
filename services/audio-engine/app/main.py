@@ -13,6 +13,7 @@ from .adapters import MockStreamingASR, StreamingHypothesis
 from .audio import pcm_rms
 from .adapters.local import LocalStreamingASR, claim_local_runtime, get_local_provider, local_readiness, release_local_runtime
 from .rehearsal import recover_interrupted_jobs, router as rehearsal_router
+from .registered_replay import router as registered_replay_router
 from .environment import load_backend_environment
 
 
@@ -33,6 +34,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.include_router(rehearsal_router)
+app.include_router(registered_replay_router)
 
 
 @app.middleware("http")

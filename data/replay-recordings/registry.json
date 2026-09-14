@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "recordings": [{
+    "id": "R001-M05-2",
+    "profilePath": "data/replay-recordings/R001-M05-2.profile.json",
+    "referencePath": "data/replay-recordings/R001-M05-2.reference.json",
+    "canonicalPath": "data/productions/decadence-gyeongseong/numbers/M05-2.json",
+    "canonicalSha256": "823e4630702aa3c1be4b2b59fed7fd10507ae3c0a459dcf8bb098407bfe73e74"
+  }]
+}
