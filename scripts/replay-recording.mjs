@@ -9,7 +9,8 @@ import { parseArgs } from "node:util";
 import { createRunnableDevEnvironment, resolveConfig } from "vite";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const { values } = parseArgs({ options: { recording: { type: "string", default: "R001-M05-2" } } });
+const { values } = parseArgs({ options: { recording: { type: "string", default: "R001-M05-2" }, policy: { type: "string", default: "discriminative-words" } } });
+if (!["baseline", "discriminative-words"].includes(values.policy)) throw new Error("Unknown matcher policy");
 const compiler = createRunnableDevEnvironment("cli", await resolveConfig({ root, configFile: false, envDir: false,
   environments: { cli: { consumer: "server", resolve: { noExternal: [/^@stage\//] }, dev: { moduleRunnerTransform: true } } }
 }, "serve"), { hot: false });
@@ -25,7 +26,7 @@ try {
   const script = buildRecordingReplayScript(show, loaded.profile);
   const audio = { currentTime: 0, duration: loaded.durationMs / 1000, playbackRate: 1, paused: true, ended: false, seeking: false,
     async play() { this.paused = false; }, pause() { this.paused = true; } };
-  const replay = new RealtimeReplayController(script, loaded.evidence, audio);
+  const replay = new RealtimeReplayController(script, loaded.evidence, audio, values.policy);
   await replay.start();
   for (const event of buildReplayEvidenceEvents(loaded.evidence)) { audio.currentTime = event.dueAtMs / 1000; replay.tick(); }
   audio.currentTime = audio.duration; audio.ended = true; audio.paused = true;
@@ -34,7 +35,7 @@ try {
   const output = resolve(root, ".stage-data/replay-evaluations", `check-${randomUUID()}`);
   await mkdir(output, { recursive: true });
   await writeFile(resolve(output, "evaluation.json"), JSON.stringify({ validationMode: "deterministic-saved-evidence-not-real-elapsed", ...report,
-    sourceAudioSha256: loaded.profile.sourceAudioSha256, sourceASRSha256: loaded.evidence.sourceArtifactSha256,
+    matcherPolicy: values.policy, sourceAudioSha256: loaded.profile.sourceAudioSha256, sourceASRSha256: loaded.evidence.sourceArtifactSha256,
     originalCanonicalCount: show.acts.flatMap((act) => act.numbers.flatMap((number) => number.cues)).length,
     projectedCueCount: script.segments.length, state }, null, 2) + "\n", { flag: "wx" });
   console.log(JSON.stringify({ validationMode: "deterministic-saved-evidence-not-real-elapsed", output, state: state.state, lastCue: state.engine.currentSegment?.id,

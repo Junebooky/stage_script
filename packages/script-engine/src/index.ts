@@ -58,8 +58,10 @@ export interface EngineConfig {
 }
 
 export interface RuntimeTelemetryEvent {
+  sequence?: number;
   timestamp: number;
-  event: "hypothesis" | "trigger" | "manual" | "resync" | "show-state" | "hold";
+  event: "hypothesis" | "matcher" | "trigger" | "manual" | "resync" | "show-state" | "hold";
+  match?: MatchResult;
   currentCue: string | null;
   candidateCue?: string;
   rawAsr?: string;
@@ -98,6 +100,7 @@ export class ScriptFollowingEngine {
   private freshSpeechRequiredAfter: number | null = null;
   private readonly retiredManualStreams = new Set<string>();
   private readonly telemetry: RuntimeTelemetryEvent[] = [];
+  private telemetrySequence = 0;
   private profiles: CueProfile[];
 
   constructor(
@@ -252,13 +255,19 @@ export class ScriptFollowingEngine {
           candidateOffset: Math.abs(index - expectedNext),
           mode: this.state.searchMode,
           operatingMode: this.config.operatingMode,
+          rawTranscript: hypothesis.contextText ?? hypothesis.text,
+          normalizedOffset: offset,
           nearbySegments: this.script.segments.slice(Math.max(0, index - 3), index + 4),
           profile,
           timingPrior: this.timingPrior(profile, hypothesis.receivedAt)
         });
         result.start += offset;
         result.end += offset;
-        if (result.eligible && this.cursor.isCurrentLine(result.start, result.end)) {
+        const currentLine = result.eligible && this.cursor.isCurrentLine(result.start, result.end);
+        this.log({ timestamp: hypothesis.receivedAt, event: "matcher", currentCue: this.state.currentSegment?.id ?? null,
+          candidateCue: segment.id, match: { ...result }, cursorFloor: this.cursor.floor,
+          decision: currentLine ? "previous-cue-trailing-evidence" : result.reason ?? (result.eligible ? "eligible" : "unmatched") });
+        if (currentLine) {
           offset = Math.max(offset + 1, result.end);
           continue;
         }
@@ -416,7 +425,7 @@ export class ScriptFollowingEngine {
   setProfiles(profiles: CueProfile[]): void { this.profiles = parseCueProfiles(profiles); }
 
   private log(event: RuntimeTelemetryEvent): void {
-    this.telemetry.push(event);
+    this.telemetry.push({ ...event, sequence: ++this.telemetrySequence });
     if (this.telemetry.length > this.config.telemetryLimit) this.telemetry.splice(0, this.telemetry.length - this.config.telemetryLimit);
   }
 

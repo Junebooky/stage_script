@@ -8,6 +8,8 @@ export function availableConfidence(value: number | null): number | null {
 }
 
 export interface StreamingHypothesis {
+  /** Only a saved-word adapter may assert completed word boundaries; not live partials. */
+  evidenceBasis?: "saved-completed-words";
   /** Adapter verified a post-operator audio generation via reset acknowledgment. */
   boundaryVerified?: boolean;
   utteranceId?: string;
@@ -23,6 +25,8 @@ export interface StreamingHypothesis {
 }
 
 export interface ScriptContext {
+  rawTranscript?: string;
+  normalizedOffset?: number;
   candidateOffset: number;
   mode: "NORMAL" | "RESYNC" | "FULL_RESYNC";
   operatingMode?: OperatingMode;
@@ -32,6 +36,9 @@ export interface ScriptContext {
 }
 
 export interface MatchResult {
+  reason?: string;
+  /** Diagnostic ambiguity competitor, NEVER an eligible next-only candidate. */
+  competitor?: { cueId: string; score: number } | null;
   segmentId: string;
   score: number;
   prefixScore: number;
@@ -49,6 +56,8 @@ export interface MatchResult {
 export interface ScriptMatcher {
   match(observed: StreamingHypothesis, expected: ScriptSegment, context: ScriptContext): MatchResult;
 }
+
+export { DiscriminativeWordMatcher } from "./discriminative-word-matcher";
 
 export interface MatcherConfig {
   triggerThreshold: number;
@@ -84,7 +93,7 @@ export function normalizeKorean(input: string): string {
     .join("");
 }
 
-function editSimilarity(left: string, right: string): number {
+export function editSimilarity(left: string, right: string): number {
   if (left === right) return 1;
   if (!left.length || !right.length) return 0;
   const previous = Array.from({ length: right.length + 1 }, (_, index) => index);
@@ -158,7 +167,7 @@ function matchPerformance(hypothesis: StreamingHypothesis, segment: ScriptSegmen
   const speech = hypothesis.speechActive ? 1 : 0;
   const timing = context.timingPrior ?? 0;
   const threshold = Math.max(0.72, context.profile?.thresholds.text ?? 0.82);
-  let best: MatchResult = { segmentId: segment.id, observed, expected: "", score: 0, prefixScore: 0, coverage: 0, start: 0, end: 0, fast: false, eligible: false, components: { text: 0, anchor: 0, sequence, timing, asr, speech } };
+  let best: MatchResult = { segmentId: segment.id, observed, expected: "", score: 0, prefixScore: 0, coverage: 0, start: 0, end: 0, fast: false, eligible: false, reason: observed.length < 4 ? "below-four-character-baseline" : "no-distinctive-baseline-anchor", components: { text: 0, anchor: 0, sequence, timing, asr, speech } };
   if (segment.type === "IMAGE" || !speech) return best;
   const otherTexts = (context.nearbySegments ?? []).filter((other) => other.id !== segment.id).flatMap((other) => other.matchText.map(normalizeKorean));
   const unique = (anchor: string) => !otherTexts.some((text) => text.includes(anchor));
@@ -181,7 +190,7 @@ function matchPerformance(hypothesis: StreamingHypothesis, segment: ScriptSegmen
     // a perfect previous/nearby lyric. Sequence prior must not override that.
     const distinctive = quality === 1 || quality - competingQuality(observed.slice(start, start + length)) > 0.03;
     const eligible = quality >= 0.84 && score >= threshold && distinctive;
-    if ((eligible && !best.eligible) || (eligible === best.eligible && score > best.score)) best = { segmentId: segment.id, observed, expected, score, prefixScore: quality, coverage: length / expected.length, start, end: start + length, fast: false, eligible, selectedAnchor, components: { text: quality, anchor, sequence, timing, asr, speech } };
+    if ((eligible && !best.eligible) || (eligible === best.eligible && score > best.score)) best = { segmentId: segment.id, observed, expected, score, prefixScore: quality, coverage: length / expected.length, start, end: start + length, fast: false, eligible, selectedAnchor, reason: eligible ? "baseline-anchor-accepted" : !distinctive ? "competing-lyric" : quality < 0.84 ? "text-quality" : "score-threshold", components: { text: quality, anchor, sequence, timing, asr, speech } };
   };
   for (const source of segment.matchText) {
     const expected = normalizeKorean(source);

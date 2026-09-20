@@ -1,6 +1,7 @@
-import { ScriptFollowingEngine, type ScriptEngineSnapshot } from "@stage/script-engine";
+import { ScriptFollowingEngine, type ScriptEngineSnapshot, type RuntimeTelemetryEvent } from "@stage/script-engine";
 import type { PerformanceScript } from "@stage/script-schema";
 import type { ASRReplayEvidence } from "./recording-profile";
+import { DiscriminativeWordMatcher, PrefixFuzzyMatcher } from "@stage/alignment";
 
 /** HTMLAudioElement satisfies this port. Tests use a controllable MEDIA clock. */
 export interface ReplayAudioClock {
@@ -18,6 +19,8 @@ export interface RecordingRuntimeTrigger {
   evidenceDueAtMs: number | null; evidenceStartMs: number | null;
 }
 export interface ReplayDelivery {
+  evidence?: ReplayEvidenceEvent;
+  matcherTrace?: RuntimeTelemetryEvent[];
   index: number; atMs: number; dueAtMs: number; expectedCueId: string | null;
   resultingCueId: string | null; decision: string; discarded: boolean;
 }
@@ -66,7 +69,8 @@ export class RealtimeReplayController {
   private readonly script: PerformanceScript;
   private readonly events: ReplayEvidenceEvent[];
 
-  constructor(script: PerformanceScript, evidence: ASRReplayEvidence, private readonly audio: ReplayAudioClock) {
+  constructor(script: PerformanceScript, evidence: ASRReplayEvidence, private readonly audio: ReplayAudioClock,
+    private readonly matcherPolicy: "baseline" | "discriminative-words" = "discriminative-words") {
     this.script = structuredClone(script);
     // The projection preserves canonical metadata. This replay-only runtime copy
     // refuses any embedded calibration so fallback/timing priors cannot sneak in.
@@ -77,7 +81,9 @@ export class RealtimeReplayController {
 
   private freshEngine() {
     this.run += 1;
-    this.engine = new ScriptFollowingEngine(this.script, undefined, { operatingMode: "PERFORMANCE_LOCAL", profiles: [] });
+    this.engine = new ScriptFollowingEngine(this.script,
+      this.matcherPolicy === "baseline" ? new PrefixFuzzyMatcher() : new DiscriminativeWordMatcher(),
+      { operatingMode: "PERFORMANCE_LOCAL", profiles: [] });
     this.engine.arm();
     this.cursor = 0; this.lastTimeMs = 0; this.latest = null; this.triggers = []; this.deliveries = [];
     this.retiredUtterances.clear(); this.error = null;
@@ -154,17 +160,21 @@ export class RealtimeReplayController {
       const expected = this.engine.snapshot().nextSegment?.id ?? null;
       const previous = this.engine.snapshot().lastTrigger;
       const discarded = this.retiredUtterances.has(event.utteranceId);
+      const telemetryStart = this.engine.exportTelemetry().at(-1)?.sequence ?? 0;
       this.latest = event;
       if (!discarded) {
         if (event.first) this.engine.speechStart(event.onsetMs);
         this.engine.processHypothesis({ text: event.text, confidence: null, confidenceBasis: "unavailable",
+          evidenceBasis: "saved-completed-words",
           receivedAt: atMs, speechActive: true, utteranceId: `${this.run}:${event.utteranceId}`, isFinal: event.final });
         this.capture(previous, event);
       }
       const telemetry = this.engine.exportTelemetry();
+      const trace = telemetry.filter((entry) => (entry.sequence ?? 0) > telemetryStart);
       this.deliveries.push({ index: this.cursor, atMs, dueAtMs: event.dueAtMs, expectedCueId: expected,
+        evidence: event, matcherTrace: trace,
         resultingCueId: this.engine.snapshot().currentSegment?.id ?? null,
-        decision: discarded ? "manual-retired-utterance" : telemetry.at(-1)?.decision ?? telemetry.at(-1)?.event ?? "no-trigger", discarded });
+        decision: discarded ? "manual-retired-utterance" : trace.at(-1)?.decision ?? (this.engine.snapshot().hold ? "hold-checkpoint" : expected === null ? "no-next-candidate" : "unchanged-or-consumed-evidence"), discarded });
       this.cursor += 1;
       if (event.final) this.engine.speechEnd();
     }

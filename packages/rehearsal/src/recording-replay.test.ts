@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
+import { execFileSync } from "node:child_process";
 import { parseShow, type PerformanceScript } from "@stage/script-schema";
 import { ScriptFollowingEngine } from "@stage/script-engine";
 import rawShow from "../../../data/productions/decadence-gyeongseong/numbers/M05-2.json";
@@ -260,3 +261,29 @@ const original = "recordings/decadence-gyeongseong/R001/M05-2/M5-2_외로운별 
 it.skipIf(!existsSync(original))("28: local original WAV remains byte-identical (optional private asset)", () => {
   expect(createHash("sha256").update(readFileSync(original)).digest("hex")).toBe(profile.sourceAudioSha256);
 });
+
+it.skipIf(!existsSync(original) || !existsSync(profile.asrEvidenceSource.path) || !existsSync("services/audio-engine/.venv/bin/python"))(
+  "private R001 evidence: early policy improves timing without changing any cue identity or safety metric", async () => {
+    // Validated read-only loader: no provider client, key, prompt, or new ASR request.
+    const loaded = JSON.parse(execFileSync(".venv/bin/python", ["-m", "app.registered_replay", "R001-M05-2"], { cwd: "services/audio-engine", encoding: "utf8" }));
+    const reports: ReturnType<typeof evaluateRecordingReplay>[] = [];
+    for (const policy of ["baseline", "discriminative-words"] as const) {
+      const audio = new AudioClock();
+      const controller = new RealtimeReplayController(projected, loaded.evidence, audio, policy);
+      await controller.start();
+      for (const event of buildReplayEvidenceEvents(loaded.evidence)) tickAt(controller, audio, event.dueAtMs);
+      audio.currentTime = audio.duration; audio.ended = true; audio.paused = true;
+      const state = controller.tick();
+      expect(state.triggers.map((t) => t.cueId)).toEqual(profile.performedCueIds);
+      expect(state.deliveries).toHaveLength(129);
+      expect(state.deliveries.every((d) => d.atMs >= d.dueAtMs)).toBe(true);
+      const report = evaluateRecordingReplay(profile, reference, state.triggers, { deliveries: state.deliveries });
+      expect(report.metrics).toMatchObject({ correctTriggerCount: 27, missedCueCount: 0, wrongTriggerCount: 0, earlyCount: 0,
+        unexpectedReplaySkipCount: 0, repeatedLyricConfusionCount: 0, postTakeFalseTriggerCount: 0, manualTriggerCount: 0, fallbackTriggerCount: 0 });
+      reports.push(report);
+    }
+    expect(reports[0]!.metrics.medianAbsoluteTimingErrorMs).toBeCloseTo(3120.25);
+    expect(reports[1]!.metrics.medianAbsoluteTimingErrorMs).toBeLessThan(1900);
+    expect(reports[1]!.metrics.p95AbsoluteTimingErrorMs).toBeLessThan(3500);
+    reports[1]!.cues.forEach((cue, index) => expect(cue.actualTriggerMs!).toBeLessThanOrEqual(reports[0]!.cues[index]!.actualTriggerMs!));
+  });
