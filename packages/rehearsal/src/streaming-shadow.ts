@@ -99,8 +99,11 @@ export function evaluateStreamingShadows(script: PerformanceScript, observations
         latency: { t1: null, t2: null, t3: null, t5: null },
         note: "t2/t3/t5 are observed candidate/decision times relative to stream origin, NOT onset-relative latency; t4 is containing-ASR-utterance final, not a cue-specific final. Requires independent reviewed onset attribution." };
     });
+    const finalSnapshot = engine.snapshot();
     return { triggers, progression, byCue, emittedCount: triggers.length,
       notTriggeredCount: script.segments.length - new Set(triggers.map((item) => item.cueId)).size,
+      skippedIndexes: finalSnapshot.skippedIndexes,
+      skippedCues: finalSnapshot.skippedIndexes.map((idx) => script.segments[idx]?.id).filter(Boolean) as string[],
       anchorRemovalCount: triggers.filter((item) => item.laterRemovalAtMs !== null).length,
       anchorRemovalRate: triggers.length ? triggers.filter((item) => item.laterRemovalAtMs !== null).length / triggers.length : null,
       unsafeEarlyTriggerRate: null, reason: "Independent audio review required; anchor removal is not acoustic ground truth" };

@@ -4,9 +4,12 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve, dirname } from "node:path";
 import { createRunnableDevEnvironment, resolveConfig } from "vite";
-const input = process.argv[2];
-if (!input) throw new Error("Usage: node scripts/analyze-streaming-measurement.mjs capture.json");
-const root = process.cwd(), output = dirname(resolve(input));
+const args = process.argv.slice(2);
+const force = args.includes("--force");
+const nonFlagArgs = args.filter((arg) => !arg.startsWith("--"));
+const input = nonFlagArgs[0];
+if (!input) throw new Error("Usage: node scripts/analyze-streaming-measurement.mjs capture.json [outputDir] [--force]");
+const root = process.cwd(), output = nonFlagArgs[1] ? resolve(nonFlagArgs[1]) : dirname(resolve(input));
 const capture = JSON.parse(await readFile(input, "utf8"));
 if (capture.mode !== "actual-local-streaming-paced-file-not-microphone" || !capture.complete || !capture.sourceUnchanged) throw new Error("Incomplete/untrusted capture");
 const compiler = createRunnableDevEnvironment("cli", await resolveConfig({ root, configFile: false, envDir: false,
@@ -38,10 +41,11 @@ try {
   result.silverIdentityAudit = { immediate: identityAudit(result.immediate), stable: identityAudit(result.stable) };
   result.onsetLatency = { status: "NOT_MEASURABLE_WITHOUT_INDEPENDENT_AUDIO_ONSET_REVIEW", t1: null, t2: null, t3: null, t5: null,
     completedWordImprovement: null, reason: "No independently reviewed cue onset reference supplied. No live-ASR-derived or saved-Groq-derived t0 is substituted." };
-  await writeFile(resolve(output, "shadow-analysis.json"), JSON.stringify(result, null, 2) + "\n", { flag: "wx" });
+  const writeFlag = force ? "w" : "wx";
+  await writeFile(resolve(output, "shadow-analysis.json"), JSON.stringify(result, null, 2) + "\n", { flag: writeFlag });
   await writeFile(resolve(output, "onsets.review-template.json"), JSON.stringify({ version: 1, sourceSha256: capture.sourceSha256,
     status: "unreviewed", basis: "independent-audio-review-required", reviewer: null,
-    cues: script.segments.map((cue) => ({ cueId: cue.id, onsetSample: null, endSample: null, firstDiscriminativeWordEndSample: null, note: "Use original 48000 Hz source; do not copy silver or live ASR timestamps" })) }, null, 2) + "\n", { flag: "wx" });
+    cues: script.segments.map((cue) => ({ cueId: cue.id, onsetSample: null, endSample: null, firstDiscriminativeWordEndSample: null, note: "Use original 48000 Hz source; do not copy silver or live ASR timestamps" })) }, null, 2) + "\n", { flag: writeFlag });
   console.log(JSON.stringify({ output, capture: result.capture, hypotheses: result.hypotheses, partials: result.partials, finals: result.finals,
     revisionRate: result.revisionRate, revisionNumerator: result.revisionNumerator, revisionDenominator: result.revisionDenominator,
     immediate: { emitted: result.immediate.emittedCount, anchorRemovalRate: result.immediate.anchorRemovalRate },

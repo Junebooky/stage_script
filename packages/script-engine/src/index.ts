@@ -1,4 +1,4 @@
-import { normalizeKorean, PrefixFuzzyMatcher, type MatchResult, type ScriptMatcher, type StreamingHypothesis } from "@stage/alignment";
+import { editSimilarity, normalizeKorean, PrefixFuzzyMatcher, type MatchResult, type ScriptMatcher, type StreamingHypothesis } from "@stage/alignment";
 import { parseCueProfiles, type CueProfile, type OperatingMode, type PerformanceScript, type ScriptSegment } from "@stage/script-schema";
 import { HypothesisCursor } from "./hypothesis-cursor";
 export { ShowRuntime, type ShowPhase, type ShowRuntimeSnapshot, type ShowRuntimeConfig, type RuntimeReadiness, type IntermissionOutput } from "./show-runtime";
@@ -42,8 +42,11 @@ export interface ScriptEngineSnapshot {
   lowConfidenceCount: number;
   lastTrigger: TriggerEvent | null;
   completedIndexes: number[];
+  skippedIndexes: number[];
   finished: boolean;
 }
+
+export type ScriptState = ScriptEngineSnapshot;
 
 export interface EngineConfig {
   normalLookahead: number;
@@ -130,6 +133,7 @@ export class ScriptFollowingEngine {
       lowConfidenceCount: 0,
       lastTrigger: null,
       completedIndexes: [],
+      skippedIndexes: [],
       finished: false
     };
   }
@@ -242,6 +246,7 @@ export class ScriptFollowingEngine {
     if (this.state.hold) { this.cursor.discard(); return this.snapshot(); }
     const candidates = this.candidateIndexes();
     let best: { index: number; result: MatchResult } | null = null;
+    let lookaheadSkipReason: string | null = null;
 
     for (const index of candidates) {
       const segment = this.script.segments[index];
@@ -249,6 +254,7 @@ export class ScriptFollowingEngine {
       if (segment.type === "IMAGE") continue;
       const profile = this.profiles.find((profile) => profile.cueId === segment.id) ?? segment.profile;
       const expectedNext = Math.max(0, this.state.currentIndex + 1);
+      const isLookahead = index > expectedNext;
       let offset = Math.max(this.cursor.floor, normalized.length - 512);
       while (offset < normalized.length) {
         const result = this.matcher.match({ ...hypothesis, text: normalized.slice(offset) }, segment, {
@@ -271,7 +277,29 @@ export class ScriptFollowingEngine {
           offset = Math.max(offset + 1, result.end);
           continue;
         }
-        if (!best || (result.eligible && !best.result.eligible) || (result.eligible === best.result.eligible && result.score > best.result.score)) best = { index, result };
+        if (result.eligible) {
+          if (isLookahead && this.config.operatingMode === "PERFORMANCE_LOCAL" && this.state.searchMode === "NORMAL") {
+            const validation = this.validateLookaheadSkip(index, result, hypothesis);
+            if (!validation.valid) {
+              this.log({
+                timestamp: hypothesis.receivedAt,
+                event: "matcher",
+                currentCue: this.state.currentSegment?.id ?? null,
+                candidateCue: segment.id,
+                match: { ...result, eligible: false },
+                cursorFloor: this.cursor.floor,
+                decision: validation.reason
+              });
+              break;
+            }
+            lookaheadSkipReason = validation.reason;
+          }
+          if (!best || !best.result.eligible || result.score > best.result.score) {
+            best = { index, result };
+          }
+        } else if (!best) {
+          best = { index, result };
+        }
         break;
       }
       // The next cue's two syllables take priority over speculative skips.
@@ -286,6 +314,24 @@ export class ScriptFollowingEngine {
     this.log({ timestamp: hypothesis.receivedAt, event: "hypothesis", currentCue: this.state.currentSegment?.id ?? null, candidateCue: segment.id, rawAsr: hypothesis.text, normalizedAsr: normalized, scores: best.result.components, selectedAnchor: best.result.selectedAnchor, matchRange: [best.result.start, best.result.end], timingPrior: best.result.components?.timing, cursorFloor: this.cursor.floor, decision: best.result.eligible ? "match" : "unmatched" });
 
     if (best.result.eligible && cooledDown) {
+      const expectedNext = Math.max(0, this.state.currentIndex + 1);
+      const isLookahead = best.index > expectedNext;
+      const newlySkipped = isLookahead
+        ? Array.from({ length: best.index - expectedNext }, (_, i) => expectedNext + i)
+        : [];
+      if (isLookahead) {
+        const skippedSegment = this.script.segments[expectedNext]!;
+        this.log({
+          timestamp: hypothesis.receivedAt,
+          event: "trigger",
+          currentCue: skippedSegment.id,
+          candidateCue: segment.id,
+          source: "automatic",
+          decision: lookaheadSkipReason ?? `lookahead-skip-by-${segment.id}`,
+          transition: "skipped",
+          cursorFloor: this.cursor.floor
+        });
+      }
       this.cursor.consume(best.result.start, best.result.end, best.result.expected);
       this.state = this.trigger(
         segment,
@@ -293,7 +339,8 @@ export class ScriptFollowingEngine {
         best.result.score,
         hypothesis.text,
         hypothesis.receivedAt,
-        "automatic"
+        "automatic",
+        newlySkipped
       );
       return this.snapshot();
     }
@@ -340,7 +387,8 @@ export class ScriptFollowingEngine {
     confidence: number,
     hypothesis: string,
     at: number,
-    source: TriggerEvent["source"]
+    source: TriggerEvent["source"],
+    skippedFromLookahead?: number[]
   ): ScriptEngineSnapshot {
     const nextSegment = this.script.segments[index + 1] ?? null;
     this.lastTriggerSpeechSequence = this.speechSequence;
@@ -351,6 +399,12 @@ export class ScriptFollowingEngine {
     // Only a caption that was actually on air can become Complete. Skips are not completions.
     const completed = new Set(this.state.completedIndexes.filter((completedIndex) => completedIndex < index));
     if (this.state.currentIndex >= 0 && this.state.currentIndex < index) completed.add(this.state.currentIndex);
+    const skipped = new Set(this.state.skippedIndexes.filter((skippedIndex) => skippedIndex < index));
+    if (skippedFromLookahead) {
+      for (const skippedIndex of skippedFromLookahead) {
+        if (skippedIndex < index) skipped.add(skippedIndex);
+      }
+    }
     return {
       ...this.state,
       phase: "TRIGGERED",
@@ -364,6 +418,7 @@ export class ScriptFollowingEngine {
       expected: nextSegment?.matchText[0] ?? "",
       lowConfidenceCount: 0,
       completedIndexes: [...completed].sort((left, right) => left - right),
+      skippedIndexes: [...skipped].sort((left, right) => left - right),
       finished: false,
       lastTrigger: {
         segment,
@@ -377,6 +432,97 @@ export class ScriptFollowingEngine {
     };
   }
 
+  private validateLookaheadSkip(
+    candidateIndex: number,
+    match: MatchResult,
+    hypothesis: StreamingHypothesis
+  ): { valid: boolean; reason: string } {
+    const expectedNext = Math.max(0, this.state.currentIndex + 1);
+    if (candidateIndex !== expectedNext + 1) {
+      return { valid: false, reason: "lookahead-skip-not-next-plus-one" };
+    }
+
+    if (this.state.hold || this.freshSpeechRequiredAfter !== null || hypothesis.receivedAt < this.manualCheckpointAt) {
+      return { valid: false, reason: "lookahead-skip-blocked-by-operator-control" };
+    }
+
+    const unTriggeredSegment = this.script.segments[expectedNext];
+    if (!unTriggeredSegment || unTriggeredSegment.type === "IMAGE") {
+      return { valid: false, reason: "lookahead-skip-forbidden-across-image-or-empty" };
+    }
+
+    // 1. Temporal Progress Guard (strictly deterministic event timestamp based)
+    const lastTrigger = this.state.lastTrigger;
+    if (!lastTrigger) {
+      return { valid: false, reason: "lookahead-skip-forbidden-before-first-trigger" };
+    }
+
+    const elapsedMs = hypothesis.receivedAt - lastTrigger.triggeredAt;
+    if (elapsedMs <= 0) {
+      return { valid: false, reason: "lookahead-skip-negative-or-zero-elapsed-time" };
+    }
+
+    const profile = this.profiles.find((p) => p.cueId === unTriggeredSegment.id) ?? unTriggeredSegment.profile;
+    let minTimeMs: number;
+    if (profile?.timing?.medianAfterPreviousMs !== undefined) {
+      const tol = profile.timing.lateToleranceMs || profile.timing.earlyToleranceMs || 500;
+      minTimeMs = profile.timing.medianAfterPreviousMs + tol;
+    } else {
+      const charCount = Math.max(1, ...unTriggeredSegment.matchText.map((t) => normalizeKorean(t).length));
+      minTimeMs = Math.max(2000, charCount * 250);
+    }
+
+    if (elapsedMs < minTimeMs) {
+      return { valid: false, reason: `lookahead-skip-temporal-guard-active:${elapsedMs.toFixed(0)}ms<${minTimeMs.toFixed(0)}ms` };
+    }
+
+    // 2. High-Confidence Trigger Guard
+    if (!match.eligible) {
+      return { valid: false, reason: "lookahead-skip-match-ineligible" };
+    }
+    if (match.score < 0.90) {
+      return { valid: false, reason: `lookahead-skip-score-below-threshold:${match.score.toFixed(3)}<0.90` };
+    }
+    const anchor = match.selectedAnchor;
+    if (!anchor || normalizeKorean(anchor).length < 4) {
+      return { valid: false, reason: "lookahead-skip-anchor-below-four-characters" };
+    }
+
+    // 3. Disambiguation Margin Guard (>= 1/3 margin, max similarity <= 2/3)
+    const evidence = normalizeKorean(anchor);
+    const computeMaxSimilarity = (targetTexts: string[]): number => {
+      let maxSim = 0;
+      for (const target of targetTexts) {
+        const norm = normalizeKorean(target);
+        if (!norm) continue;
+        if (norm.includes(evidence) || evidence.includes(norm)) return 1.0;
+        const windowLen = evidence.length;
+        if (norm.length <= windowLen) {
+          maxSim = Math.max(maxSim, editSimilarity(evidence, norm));
+        } else {
+          for (let start = 0; start <= norm.length - windowLen; start++) {
+            maxSim = Math.max(maxSim, editSimilarity(evidence, norm.slice(start, start + windowLen)));
+          }
+        }
+      }
+      return maxSim;
+    };
+
+    const maxSimCurrent = computeMaxSimilarity(unTriggeredSegment.matchText);
+    if (maxSimCurrent > 2 / 3) {
+      return { valid: false, reason: `lookahead-skip-current-cue-collision:${maxSimCurrent.toFixed(3)}>0.667` };
+    }
+
+    if (lastTrigger.segment) {
+      const maxSimPrev = computeMaxSimilarity(lastTrigger.segment.matchText);
+      if (maxSimPrev > 2 / 3) {
+        return { valid: false, reason: `lookahead-skip-previous-cue-collision:${maxSimPrev.toFixed(3)}>0.667` };
+      }
+    }
+
+    return { valid: true, reason: `lookahead-skip-by-${match.segmentId}` };
+  }
+
   private candidateIndexes(): number[] {
     if (this.state.searchMode === "FULL_RESYNC") {
       return this.script.segments.map((_, index) => index);
@@ -385,7 +531,11 @@ export class ScriptFollowingEngine {
     const start = this.state.searchMode === "RESYNC"
       ? Math.max(0, expectedNext - this.config.resyncLookbehind)
       : expectedNext;
-    const length = this.state.searchMode === "RESYNC" ? this.config.resyncLookahead + this.config.resyncLookbehind + 1 : this.config.operatingMode === "PERFORMANCE_LOCAL" ? 1 : this.config.normalLookahead;
+    const length = this.state.searchMode === "RESYNC"
+      ? this.config.resyncLookahead + this.config.resyncLookbehind + 1
+      : this.config.operatingMode === "PERFORMANCE_LOCAL"
+        ? 2
+        : this.config.normalLookahead;
     const indexes = Array.from({ length }, (_, offset) => start + offset).filter((index) => index < this.script.segments.length);
     // An explicit IMAGE cue is a manual barrier; silence never creates or skips one.
     const barrier = indexes.findIndex((index) => index >= expectedNext && this.script.segments[index]?.type === "IMAGE");

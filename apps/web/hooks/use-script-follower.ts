@@ -259,6 +259,7 @@ export function useScriptFollower() {
   return {
     script: demoScript,
     snapshot,
+    skippedIndexes: snapshot.skippedIndexes,
     latency,
     latencyBasis,
     asrStatus,
