@@ -10,7 +10,7 @@ export const CueQueue = memo(function CueQueue({
   skippedIndexes
 }: {
   script: PerformanceScript;
-  snapshot: ScriptEngineSnapshot;
+  snapshot: Pick<ScriptEngineSnapshot, "currentIndex" | "completedIndexes" | "skippedIndexes" | "nextSegment" | "finished">;
   skippedIndexes?: number[];
 }) {
   const completed = new Set(snapshot.completedIndexes);

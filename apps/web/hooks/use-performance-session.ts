@@ -29,6 +29,7 @@ export function usePerformanceSession(show: Show, intermissionOutput: Intermissi
   const pendingHypothesisRef = useRef<StreamingHypothesis | null>(null);
   const paintRef = useRef<number | null>(null);
   const micAttemptRef = useRef(0);
+  const demoStartRef = useRef(false);
   const publish = useCallback((next: ShowRuntimeSnapshot) => setState(next), []);
 
   const onHypothesis = useCallback((hypothesis: StreamingHypothesis) => {
@@ -50,6 +51,7 @@ export function usePerformanceSession(show: Show, intermissionOutput: Intermissi
     if (["idle", "denied", "unsupported", "error"].includes(microphone.status)) browser.stop();
   }, [microphone.status, browser.stop]);
   const stopMic = useCallback(() => {
+    demoStartRef.current = false;
     micAttemptRef.current += 1;
     pendingHypothesisRef.current = null;
     browser.stop();
@@ -88,8 +90,16 @@ export function usePerformanceSession(show: Show, intermissionOutput: Intermissi
   }, [state.script, state.actIndex]);
 
   useEffect(() => {
-    publish(runtime.setReadiness({ microphone: microphone.status === "live", asr: asrReady, assets: assetsReady, output: output.connected && output.authority }));
-  }, [runtime, publish, microphone.status, asrReady, assetsReady, output.connected, output.authority, state.actIndex]);
+    const next = runtime.setReadiness({ microphone: microphone.status === "live", asr: asrReady, assets: assetsReady, output: output.connected && output.authority });
+    // A single explicit demo start requests ARM + GO; readiness is never bypassed.
+    if (demoStartRef.current && next.phase === "ACT_ARMED" && next.ready && output.authority) {
+      demoStartRef.current = false;
+      pendingHypothesisRef.current = null;
+      microphone.resetRecognition();
+      browser.reset();
+      publish(runtime.go(performance.now()));
+    } else publish(next);
+  }, [runtime, publish, microphone.status, microphone.resetRecognition, browser.reset, asrReady, assetsReady, output.connected, output.authority, state.actIndex]);
 
   useEffect(() => {
     if (browserPreview) return;
@@ -138,7 +148,7 @@ export function usePerformanceSession(show: Show, intermissionOutput: Intermissi
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      if ((event.target as HTMLElement | null)?.closest("input,textarea,select,button,a,[contenteditable=true]") || event.repeat) return;
+      if ((event.target as HTMLElement | null)?.closest("input,textarea,select,button,a,summary,[contenteditable=true]") || event.repeat) return;
       if (event.code === "Space" || event.code === "ArrowRight") { event.preventDefault(); next(); }
       else if (event.code === "ArrowLeft") { event.preventDefault(); previous(); }
       else if (event.key.toLowerCase() === "h") hold();
@@ -167,16 +177,25 @@ export function usePerformanceSession(show: Show, intermissionOutput: Intermissi
     state, microphone, localASR, output, heardText, latency, profileStatus, assetError, asrSource, browserError: browser.error,
     actions: {
       next, previous, hold, resync, recordPaint, loadProfiles,
-      arm: () => { setHeardText(""); setLatency(null); control(() => runtime.armAct(undefined, performance.now())); },
-      go: () => control(() => runtime.go(performance.now())),
+      arm: () => { demoStartRef.current = false; setHeardText(""); setLatency(null); control(() => runtime.armAct(undefined, performance.now())); },
+      go: () => { demoStartRef.current = false; control(() => runtime.go(performance.now())); },
       intermission: () => { stopMic(); control(() => runtime.enterIntermission(performance.now())); setHeardText(""); },
       reset: () => { stopMic(); setHeardText(""); setLatency(null); control(() => runtime.reset(performance.now())); },
       manualOnly: (value: boolean) => control(() => runtime.setManualOnly(value)),
-      startMic: () => {
+      startMic: (demonstration = false) => {
         if (!authorityRef.current || !["PRE_SHOW", "ACT_ARMED", "ACT_LIVE"].includes(runtime.snapshot().phase)) return;
+        if (demonstration) {
+          demoStartRef.current = runtime.snapshot().phase !== "ACT_LIVE";
+          if (runtime.snapshot().phase === "PRE_SHOW") {
+            setHeardText(""); setLatency(null);
+            publish(runtime.armAct(undefined, performance.now()));
+          }
+        }
         const attempt = ++micAttemptRef.current;
         browser.start(); // Within the user gesture; interim results never wait for final.
-        void microphone.start().then((started) => { if (!started && micAttemptRef.current === attempt) browser.stop(); });
+        void microphone.start().then((started) => {
+          if (!started && micAttemptRef.current === attempt) { demoStartRef.current = false; browser.stop(); }
+        });
       },
       stopMic,
       exportLog: () => downloadJSON(`cueflow-${show.id}-events.json`, { showId: show.id, asrSource, productionValidated: false, exportedAt: new Date().toISOString(), events: runtime.exportTelemetry() })

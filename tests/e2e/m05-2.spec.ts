@@ -37,17 +37,14 @@ test("M05-2 defaults: browser interim cues all 36 canonical lines, no local mode
   await page.route("**/localhost:8000/**", (route) => { backendRequests++; return route.abort(); });
   await page.goto("/");
   await expect(page).toHaveURL(/\/operator$/);
+  await page.getByRole("button", { name: "🎙️ 라이브 마이크 모드" }).click();
   await expect(page.getByRole("heading", { name: "데카당스 경성" })).toBeVisible();
   await expect(page.getByLabel("Performance ASR source")).toHaveValue("browser-preview");
   const audience = await context.newPage();
   await audience.goto("/output");
   const output = audience.getByRole("main");
-  await page.getByRole("button", { name: "Arm next act" }).click();
   await page.getByRole("button", { name: "Start microphone", exact: true }).click();
-  await expect(page.getByRole("button", { name: "Go act" })).toBeEnabled();
-  await emit(page, "창가로 스며드는");
-  await expect(output).toHaveAttribute("data-kind", "black");
-  await page.getByRole("button", { name: "Go act" }).click();
+  await expect(page.getByLabel("Show lifecycle")).toHaveAttribute("data-show-state", "ACT_LIVE");
   for (const [index, cue] of canonical.acts[0]!.numbers[0]!.cues.entries()) {
     await emit(page, cue.matchText[0]!, index);
     await expect(output).toHaveAttribute("data-cue", cue.id);
@@ -63,13 +60,12 @@ test("M05-2 online manual fences ignore old browser finals and keep microphone t
   await browserFixture(page);
   await context.grantPermissions(["microphone"]);
   await page.goto("/operator");
+  await page.getByRole("button", { name: "🎙️ 라이브 마이크 모드" }).click();
   const audience = await context.newPage();
   await audience.goto("/output");
   const output = audience.getByRole("main");
-  await page.getByRole("button", { name: "Arm next act" }).click();
   await page.getByRole("button", { name: "Start microphone", exact: true }).click();
-  await expect(page.getByRole("button", { name: "Go act" })).toBeEnabled();
-  await page.getByRole("button", { name: "Go act" }).click();
+  await expect(page.getByLabel("Show lifecycle")).toHaveAttribute("data-show-state", "ACT_LIVE");
   await emit(page, "창가로 스며드는");
   await expect(output).toHaveText("창가로 스며드는 외로운 저 달빛");
   await expect(page.getByLabel("Recognized speech")).toHaveText("창가로 스며드는");

@@ -27,9 +27,13 @@ async function offlineBackend(context: BrowserContext, localReady = false) {
 
 async function loadShow(page: Page, canonical = show) {
   await page.goto("/operator");
+  await page.getByRole("button", { name: "🎙️ 라이브 마이크 모드" }).click();
+  await page.getByText("엔지니어링 설정 (Advanced Settings)", { exact: true }).click();
   await page.getByLabel("Performance ASR source").selectOption("local");
+  await page.getByText("엔지니어링 설정 (Advanced Settings)", { exact: true }).click();
   await page.getByLabel("Import canonical show").setInputFiles({ name: "canonical-show.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(canonical)) });
   await expect(page.getByRole("heading", { name: canonical.title })).toBeVisible();
+  await page.getByText("엔지니어링 설정 (Advanced Settings)", { exact: true }).click();
 }
 
 test("offline manual performance mirrors only canonical output and requires intermission ARM GO", async ({ page, context }) => {
@@ -86,6 +90,8 @@ test("a saved canonical revision sharing the demo ID initializes the actual runt
   const saved = { ...show, id: "demo-show" };
   await context.addInitScript((canonical) => localStorage.setItem("cueflow-canonical-show-v1", JSON.stringify(canonical)), saved);
   await page.goto("/operator");
+  await page.getByRole("button", { name: "🎙️ 라이브 마이크 모드" }).click();
+  await page.getByText("엔지니어링 설정 (Advanced Settings)", { exact: true }).click();
   await expect(page.getByRole("heading", { name: saved.title })).toBeVisible();
   const audience = await context.newPage();
   await audience.goto("/output");
@@ -103,6 +109,8 @@ test("a second operator cannot acquire authority or advance the audience pointer
   await expect(page.getByRole("button", { name: "Arm next act" })).toBeEnabled();
   const second = await context.newPage();
   await second.goto("/operator");
+  await second.getByRole("button", { name: "🎙️ 라이브 마이크 모드" }).click();
+  await second.getByText("엔지니어링 설정 (Advanced Settings)", { exact: true }).click();
   await expect(second.getByRole("main").getByRole("alert")).toContainText("다른 운영 창");
   await expect(second.getByRole("button", { name: "Arm next act" })).toBeDisabled();
   await expect(second.getByRole("button", { name: "Send next cue" })).toBeDisabled();
@@ -136,8 +144,7 @@ test("local interims cue canonical output, while manual reset ACK fences delayed
   const output = audience.getByRole("main", { name: "Audience caption output" });
   await page.getByRole("button", { name: "Arm next act" }).click();
   await page.getByRole("button", { name: "Start microphone", exact: true }).click();
-  await expect(page.getByRole("button", { name: "Go act" })).toBeEnabled();
-  await page.getByRole("button", { name: "Go act" }).click();
+  await expect(page.getByLabel("Show lifecycle")).toHaveAttribute("data-show-state", "ACT_LIVE");
   await expect.poll(() => generation).toBe(1);
   await expect.poll(() => pcmFrames).toBeGreaterThan(0);
   const emit = (text: string, audioGeneration: number, final = false) => socket!.send(JSON.stringify({ type: "hypothesis", text, confidence: 0.99, is_final: final, generation: audioGeneration, stream_id: `audio-${audioGeneration}`, utterance_id: `utterance-${audioGeneration}` }));

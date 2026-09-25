@@ -2,7 +2,7 @@
 
 import { AudioWaveform } from "./AudioWaveform";
 
-export function MicrophoneMonitor({ live, requesting, level, heardText, error, hasAudio, onToggle }: {
+export function MicrophoneMonitor({ live, requesting, level, heardText, error, hasAudio, onToggle, showToggle = true }: {
   live: boolean;
   requesting: boolean;
   level: number;
@@ -10,6 +10,7 @@ export function MicrophoneMonitor({ live, requesting, level, heardText, error, h
   error: string | null;
   hasAudio: boolean;
   onToggle: () => void;
+  showToggle?: boolean;
 }) {
   const hint = requesting ? "마이크 권한을 허용해주세요."
     : live ? (hasAudio ? "입력된 음성의 인식 결과를 기다립니다…" : "대기 중인 다음 대사를 읽어주세요.")
@@ -26,7 +27,7 @@ export function MicrophoneMonitor({ live, requesting, level, heardText, error, h
       </p>
       <div className="audio-row">
         <AudioWaveform level={level} active={live} />
-        <button className={`mic-toggle ${live ? "is-live" : ""}`} onClick={onToggle} aria-label={live ? "Stop microphone" : "Start microphone"} aria-pressed={live} title={live ? "마이크 끄기" : "마이크 켜기"} disabled={requesting}><span /></button>
+        {showToggle ? <button className={`mic-toggle ${live ? "is-live" : ""}`} onClick={onToggle} aria-label={live ? "Stop microphone" : "Start microphone"} aria-pressed={live} title={live ? "마이크 끄기" : "마이크 켜기"} disabled={requesting}><span /></button> : null}
       </div>
       {error ? <p className="input-error" role="status">{error}</p> : <p className="input-note">인식 원문 · 관객에게 송출되지 않습니다</p>}
     </section>

@@ -6,6 +6,52 @@
   --line: rgba(150, 178, 196, 0.15);
   color-scheme: dark;
 }
+
+/* Operator demonstration console: scoped so demo/rehearsal layouts stay intact. */
+.demo-console .demo-mode-panel { display: grid; gap: 18px; }
+.demo-mode-switch { display: flex; gap: 6px; padding: 5px; border: 1px solid var(--line); border-radius: 12px; align-self: flex-start; background: #080f18; }
+.demo-mode-switch button { border: 0; border-radius: 8px; background: transparent; color: #95a3b0; padding: 13px 24px; cursor: pointer; }
+.demo-mode-switch button[aria-pressed="true"] { background: #213547; color: #f3f0e6; box-shadow: 0 1px 5px #0006; }
+.demo-transport { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+.demo-transport button { padding: 13px 22px; border: 1px solid #405467; background: #111e2a; border-radius: 8px; cursor: pointer; }
+.demo-transport .demo-primary { min-width: 190px; min-height: 56px; background: #e8b574; color: #15100a; border-color: #f7c98c; font-size: 17px; font-weight: 700; }
+.demo-act-status, .demo-connection { color: #94a7b7; font-size: 12px; }
+.demo-connection { margin-left: auto; }
+.demo-connection[data-ready="true"] { color: #91c5a8; }
+.performance-console.demo-console .demo-layout { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); min-height: 0; gap: 28px; align-items: start; }
+.performance-console .demo-layout .live-stage { display: flex; flex-direction: column; gap: 18px; min-height: 0; }
+.demo-layout .stage-output { border-radius: 12px; background: #03070c; padding: 24px 28px; }
+.demo-layout .stage-output::before, .demo-layout .stage-output::after { display: none; }
+.demo-layout .caption-card { min-height: 220px; color: #fff; }
+.demo-layout .caption-line p { font-size: clamp(28px, 3vw, 48px); line-height: 1.5; }
+.demo-layout .caption-card.type-overlap p { font-size: clamp(24px, 2.2vw, 36px); }
+.demo-layout .demo-track-stage { display: flex; flex-direction: column; min-height: 420px; }
+.demo-track-stage .caption-card { flex: 1; }
+.demo-orb { position: relative; width: 140px; height: 140px; margin: 10px auto 0; overflow: hidden; border-radius: 50%; }
+.demo-orb .avatar-shell { background: transparent; }
+.demo-console .engineering-settings { padding: 18px 0; border-top: 1px solid var(--line); }
+.engineering-settings > summary { cursor: pointer; color: #91a1b0; font-size: 13px; padding: 6px 0; }
+.engineering-settings[open] > summary { margin-bottom: 20px; }
+.engineering-settings .operator-metrics { margin: 20px 0; }
+.demo-audio-track { padding: 18px 22px; border: 1px solid var(--line); border-radius: 10px; background: #0d172280; }
+.demo-track-label { display: flex; gap: 12px; justify-content: space-between; font-size: 12px; color: #b9c5cd; }
+.demo-track-label strong { overflow-wrap: anywhere; font-weight: 400; }
+.demo-track-label time { white-space: nowrap; font-variant-numeric: tabular-nums; font-family: monospace; color: #ecd0a9; }
+.demo-audio-track input[type="range"] { width: 100%; margin: 16px 0; padding: 0; accent-color: #e8b574; cursor: pointer; }
+.demo-audio-track .file-button { font-size: 12px; }
+.demo-console .operation-note { margin: 0; line-height: 1.7; }
+.demo-console .input-monitor .audio-waveform { width: 100%; }
+@media (max-width: 800px) {
+  .performance-console.demo-console { padding: 18px; }
+  .performance-console.demo-console .demo-layout { grid-template-columns: minmax(0, 1fr); gap: 22px; }
+  .demo-mode-switch { width: 100%; }
+  .demo-mode-switch button { flex: 1; padding: 12px 8px; font-size: 13px; }
+  .demo-layout .operator-rail { padding: 0; border: 0; }
+  .demo-layout .demo-track-stage { min-height: 320px; }
+  .demo-layout .stage-output { padding: 20px; }
+  .demo-connection { margin-left: 0; }
+  .demo-track-label { flex-direction: column; }
+}
 .production-selector { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-block: 14px; font-size: 13px; }
 .production-selector select { min-width: 0; max-width: 100%; padding: 9px; color: inherit; background: #101716; border: 1px solid #334540; border-radius: 8px; }
 .production-selector small { color: #a6b8ac; }
