@@ -15,6 +15,15 @@
           "defaultAudioPath": "recordings/decadence-gyeongseong/R001/M05-2/M5-2_외로운별 _0420.wav",
           "notes": "Authoritative source: ref.md section 7. Act 1 is an organizational assumption for this isolated number, not a verified whole-show act assignment. Instrumental outro is metadata only.",
           "productionReady": false
+        },
+        {
+          "id": "M06",
+          "title": "운명이 날 이끌어준 길",
+          "canonicalPath": "data/productions/decadence-gyeongseong/numbers/M06.json",
+          "rehearsalDirectory": "recordings/decadence-gyeongseong",
+          "defaultAudioPath": "recordings/decadence-gyeongseong/R001/M05-2/M6_운명이 날 이끌어 준 길_0420.wav",
+          "notes": "Act 1 Scene 5 Cho-sang solo number. 26 cues.",
+          "productionReady": false
         }
       ]
     }

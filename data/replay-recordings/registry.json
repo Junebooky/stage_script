@@ -1,10 +1,24 @@
 {
   "version": 1,
-  "recordings": [{
-    "id": "R001-M05-2",
-    "profilePath": "data/replay-recordings/R001-M05-2.profile.json",
-    "referencePath": "data/replay-recordings/R001-M05-2.reference.json",
-    "canonicalPath": "data/productions/decadence-gyeongseong/numbers/M05-2.json",
-    "canonicalSha256": "823e4630702aa3c1be4b2b59fed7fd10507ae3c0a459dcf8bb098407bfe73e74"
-  }]
+  "recordings": [
+    {
+      "id": "R001-M05-2",
+      "profilePath": "data/replay-recordings/R001-M05-2.profile.json",
+      "referencePath": "data/replay-recordings/R001-M05-2.reference.json",
+      "canonicalPath": "data/productions/decadence-gyeongseong/numbers/M05-2.json",
+      "canonicalSha256": "823e4630702aa3c1be4b2b59fed7fd10507ae3c0a459dcf8bb098407bfe73e74",
+      "durationMs": 226138.47916666666,
+      "publicAudioPath": "/M5-2_외로운별_0420.wav"
+    },
+    {
+      "id": "R001-M06",
+      "profilePath": "data/replay-recordings/R001-M06.profile.json",
+      "referencePath": "data/replay-recordings/R001-M06.reference.json",
+      "canonicalPath": "data/productions/decadence-gyeongseong/numbers/M06.json",
+      "canonicalSha256": "ec2810017d4c151478c8a95f8ac227dc1e369446254652799cfa9f7ae629b550",
+      "durationMs": 136000,
+      "publicAudioPath": "/M6_운명이 날 이끌어 준 길_0420.wav",
+      "defaultAudioSource": "registered"
+    }
+  ]
 }

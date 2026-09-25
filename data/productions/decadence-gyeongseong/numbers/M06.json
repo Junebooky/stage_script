@@ -1,0 +1,592 @@
+{
+  "id": "decadence-gyeongseong",
+  "title": "데카당스 경성",
+  "locale": "ko-KR",
+  "acts": [
+    {
+      "id": "act-1",
+      "title": "1막",
+      "numbers": [
+        {
+          "id": "M06",
+          "title": "운명이 날 이끌어준 길",
+          "cues": [
+            {
+              "id": "M06_C001",
+              "order": 1,
+              "type": "CAPTION",
+              "captions": [
+                {
+                  "actor": "조상",
+                  "text": "운명이 날 이끌어준 길"
+                }
+              ],
+              "matchText": [
+                "운명이 날 이끌어준 길"
+              ],
+              "metadata": {
+                "section": "A",
+                "delivery": "sung",
+                "ensemble": "solo",
+                "performers": [
+                  "조상"
+                ]
+              }
+            },
+            {
+              "id": "M06_C002",
+              "order": 2,
+              "type": "CAPTION",
+              "captions": [
+                {
+                  "actor": "조상",
+                  "text": "그 위에서 만난 한 소녀"
+                }
+              ],
+              "matchText": [
+                "그 위에서 만난 한 소녀"
+              ],
+              "metadata": {
+                "section": "A",
+                "delivery": "sung",
+                "ensemble": "solo",
+                "performers": [
+                  "조상"
+                ]
+              }
+            },
+            {
+              "id": "M06_C003",
+              "order": 3,
+              "type": "CAPTION",
+              "captions": [
+                {
+                  "actor": "조상",
+                  "text": "미칠듯 뛰는 이 가슴을"
+                }
+              ],
+              "matchText": [
+                "미칠듯 뛰는 이 가슴을"
+              ],
+              "metadata": {
+                "section": "A",
+                "delivery": "sung",
+                "ensemble": "solo",
+                "performers": [
+                  "조상"
+                ]
+              }
+            },
+            {
+              "id": "M06_C004",
+              "order": 4,
+              "type": "CAPTION",
+              "captions": [
+                {
+                  "actor": "조상",
+                  "text": "잠시 멈춰 정신차려야해"
+                }
+              ],
+              "matchText": [
+                "잠시 멈춰 정신차려야해"
+              ],
+              "metadata": {
+                "section": "A",
+                "delivery": "sung",
+                "ensemble": "solo",
+                "performers": [
+                  "조상"
+                ]
+              }
+            },
+            {
+              "id": "M06_C005",
+              "order": 5,
+              "type": "CAPTION",
+              "captions": [
+                {
+                  "actor": "조상",
+                  "text": "혁명의 칼이 향할 그 곳이"
+                }
+              ],
+              "matchText": [
+                "혁명의 칼이 향할 그 곳이"
+              ],
+              "metadata": {
+                "section": "A",
+                "delivery": "sung",
+                "ensemble": "solo",
+                "performers": [
+                  "조상"
+                ]
+              }
+            },
+            {
+              "id": "M06_C006",
+              "order": 6,
+              "type": "CAPTION",
+              "captions": [
+                {
+                  "actor": "조상",
+                  "text": "그녀의 따스한 눈동자는 아니길"
+                }
+              ],
+              "matchText": [
+                "그녀의 따스한 눈동자는 아니길"
+              ],
+              "metadata": {
+                "section": "A",
+                "delivery": "sung",
+                "ensemble": "solo",
+                "performers": [
+                  "조상"
+                ]
+              }
+            },
+            {
+              "id": "M06_C007",
+              "order": 7,
+              "type": "CAPTION",
+              "captions": [
+                {
+                  "actor": "조상",
+                  "text": "내 앞에 놓여진"
+                }
+              ],
+              "matchText": [
+                "내 앞에 놓여진"
+              ],
+              "metadata": {
+                "section": "A",
+                "delivery": "sung",
+                "ensemble": "solo",
+                "performers": [
+                  "조상"
+                ]
+              }
+            },
+            {
+              "id": "M06_C008",
+              "order": 8,
+              "type": "CAPTION",
+              "captions": [
+                {
+                  "actor": "조상",
+                  "text": "미지의 길 앞에"
+                }
+              ],
+              "matchText": [
+                "미지의 길 앞에"
+              ],
+              "metadata": {
+                "section": "A",
+                "delivery": "sung",
+                "ensemble": "solo",
+                "performers": [
+                  "조상"
+                ]
+              }
+            },
+            {
+              "id": "M06_C009",
+              "order": 9,
+              "type": "CAPTION",
+              "captions": [
+                {
+                  "actor": "조상",
+                  "text": "과연 난 어떤 선택을 하게 될까"
+                }
+              ],
+              "matchText": [
+                "과연 난 어떤 선택을 하게 될까"
+              ],
+              "metadata": {
+                "section": "A",
+                "delivery": "sung",
+                "ensemble": "solo",
+                "performers": [
+                  "조상"
+                ]
+              }
+            },
+            {
+              "id": "M06_C010",
+              "order": 10,
+              "type": "CAPTION",
+              "captions": [
+                {
+                  "actor": "조상",
+                  "text": "그녈 지킬 수 없다면"
+                }
+              ],
+              "matchText": [
+                "그녈 지킬 수 없다면"
+              ],
+              "metadata": {
+                "section": "B",
+                "delivery": "sung",
+                "ensemble": "solo",
+                "performers": [
+                  "조상"
+                ]
+              }
+            },
+            {
+              "id": "M06_C011",
+              "order": 11,
+              "type": "CAPTION",
+              "captions": [
+                {
+                  "actor": "조상",
+                  "text": "내 음악이 너의 심장에 흐를 때 난"
+                }
+              ],
+              "matchText": [
+                "내 음악이 너의 심장에 흐를 때 난"
+              ],
+              "metadata": {
+                "section": "B",
+                "delivery": "sung",
+                "ensemble": "solo",
+                "performers": [
+                  "조상"
+                ]
+              }
+            },
+            {
+              "id": "M06_C012",
+              "order": 12,
+              "type": "CAPTION",
+              "captions": [
+                {
+                  "actor": "조상",
+                  "text": "강한 전율을 느껴"
+                }
+              ],
+              "matchText": [
+                "강한 전율을 느껴"
+              ],
+              "metadata": {
+                "section": "B",
+                "delivery": "sung",
+                "ensemble": "solo",
+                "performers": [
+                  "조상"
+                ]
+              }
+            },
+            {
+              "id": "M06_C013",
+              "order": 13,
+              "type": "CAPTION",
+              "captions": [
+                {
+                  "actor": "조상",
+                  "text": "내 노래가 검은 세상을 밝혀줄"
+                }
+              ],
+              "matchText": [
+                "내 노래가 검은 세상을 밝혀줄"
+              ],
+              "metadata": {
+                "section": "B",
+                "delivery": "sung",
+                "ensemble": "solo",
+                "performers": [
+                  "조상"
+                ]
+              }
+            },
+            {
+              "id": "M06_C014",
+              "order": 14,
+              "type": "CAPTION",
+              "captions": [
+                {
+                  "actor": "조상",
+                  "text": "빛이 될 수 있나"
+                }
+              ],
+              "matchText": [
+                "빛이 될 수 있나"
+              ],
+              "metadata": {
+                "section": "B",
+                "delivery": "sung",
+                "ensemble": "solo",
+                "performers": [
+                  "조상"
+                ]
+              }
+            },
+            {
+              "id": "M06_C015",
+              "order": 15,
+              "type": "CAPTION",
+              "captions": [
+                {
+                  "actor": "조상",
+                  "text": "그댈 비춰줄 수 있나?"
+                }
+              ],
+              "matchText": [
+                "그댈 비춰줄 수 있나?"
+              ],
+              "metadata": {
+                "section": "B",
+                "delivery": "sung",
+                "ensemble": "solo",
+                "performers": [
+                  "조상"
+                ]
+              }
+            },
+            {
+              "id": "M06_C016",
+              "order": 16,
+              "type": "CAPTION",
+              "captions": [
+                {
+                  "actor": "조상",
+                  "text": "무너지면 안 돼"
+                }
+              ],
+              "matchText": [
+                "무너지면 안 돼"
+              ],
+              "metadata": {
+                "section": "C",
+                "delivery": "sung",
+                "ensemble": "solo",
+                "performers": [
+                  "조상"
+                ]
+              }
+            },
+            {
+              "id": "M06_C017",
+              "order": 17,
+              "type": "CAPTION",
+              "captions": [
+                {
+                  "actor": "조상",
+                  "text": "사랑해선 안 돼"
+                }
+              ],
+              "matchText": [
+                "사랑해선 안 돼"
+              ],
+              "metadata": {
+                "section": "C",
+                "delivery": "sung",
+                "ensemble": "solo",
+                "performers": [
+                  "조상"
+                ]
+              }
+            },
+            {
+              "id": "M06_C018",
+              "order": 18,
+              "type": "CAPTION",
+              "captions": [
+                {
+                  "actor": "조상",
+                  "text": "찢어지는 내 가슴을 부여잡아"
+                }
+              ],
+              "matchText": [
+                "찢어지는 내 가슴을 부여잡아"
+              ],
+              "metadata": {
+                "section": "C",
+                "delivery": "sung",
+                "ensemble": "solo",
+                "performers": [
+                  "조상"
+                ]
+              }
+            },
+            {
+              "id": "M06_C019",
+              "order": 19,
+              "type": "CAPTION",
+              "captions": [
+                {
+                  "actor": "조상",
+                  "text": "혹시 네게 위험이 닥치면 나"
+                }
+              ],
+              "matchText": [
+                "혹시 네게 위험이 닥치면 나"
+              ],
+              "metadata": {
+                "section": "C",
+                "delivery": "sung",
+                "ensemble": "solo",
+                "performers": [
+                  "조상"
+                ]
+              }
+            },
+            {
+              "id": "M06_C020",
+              "order": 20,
+              "type": "CAPTION",
+              "captions": [
+                {
+                  "actor": "조상",
+                  "text": "견딜 순 없을 테니"
+                }
+              ],
+              "matchText": [
+                "견딜 순 없을 테니"
+              ],
+              "metadata": {
+                "section": "C",
+                "delivery": "sung",
+                "ensemble": "solo",
+                "performers": [
+                  "조상"
+                ]
+              }
+            },
+            {
+              "id": "M06_C021",
+              "order": 21,
+              "type": "CAPTION",
+              "captions": [
+                {
+                  "actor": "조상",
+                  "text": "널 지키기 위해"
+                }
+              ],
+              "matchText": [
+                "널 지키기 위해"
+              ],
+              "metadata": {
+                "section": "C",
+                "delivery": "sung",
+                "ensemble": "solo",
+                "performers": [
+                  "조상"
+                ]
+              }
+            },
+            {
+              "id": "M06_C022",
+              "order": 22,
+              "type": "CAPTION",
+              "captions": [
+                {
+                  "actor": "조상",
+                  "text": "냉철해져야 해"
+                }
+              ],
+              "matchText": [
+                "냉철해져야 해"
+              ],
+              "metadata": {
+                "section": "C",
+                "delivery": "sung",
+                "ensemble": "solo",
+                "performers": [
+                  "조상"
+                ]
+              }
+            },
+            {
+              "id": "M06_C023",
+              "order": 23,
+              "type": "CAPTION",
+              "captions": [
+                {
+                  "actor": "조상",
+                  "text": "피할 수 없는 선택 그 앞에 서면"
+                }
+              ],
+              "matchText": [
+                "피할 수 없는 선택 그 앞에 서면"
+              ],
+              "metadata": {
+                "section": "C",
+                "delivery": "sung",
+                "ensemble": "solo",
+                "performers": [
+                  "조상"
+                ]
+              }
+            },
+            {
+              "id": "M06_C024",
+              "order": 24,
+              "type": "CAPTION",
+              "captions": [
+                {
+                  "actor": "조상",
+                  "text": "절대 조국을 등질 수는 없겠지만"
+                }
+              ],
+              "matchText": [
+                "절대 조국을 등질 수는 없겠지만"
+              ],
+              "metadata": {
+                "section": "C",
+                "delivery": "sung",
+                "ensemble": "solo",
+                "performers": [
+                  "조상"
+                ]
+              }
+            },
+            {
+              "id": "M06_C025",
+              "order": 25,
+              "type": "CAPTION",
+              "captions": [
+                {
+                  "actor": "조상",
+                  "text": "이 몸 바쳐서라도"
+                }
+              ],
+              "matchText": [
+                "이 몸 바쳐서라도"
+              ],
+              "metadata": {
+                "section": "C",
+                "delivery": "sung",
+                "ensemble": "solo",
+                "performers": [
+                  "조상"
+                ]
+              }
+            },
+            {
+              "id": "M06_C026",
+              "order": 26,
+              "type": "CAPTION",
+              "captions": [
+                {
+                  "actor": "조상",
+                  "text": "반드시 너만은 내가 지켜"
+                }
+              ],
+              "matchText": [
+                "반드시 너만은 내가 지켜"
+              ],
+              "metadata": {
+                "section": "C",
+                "delivery": "sung",
+                "ensemble": "solo",
+                "performers": [
+                  "조상"
+                ],
+                "notes": "Scene 5 ends. Connects to Scene 6."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

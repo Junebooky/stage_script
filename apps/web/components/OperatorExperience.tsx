@@ -12,11 +12,11 @@ import { CueQueue } from "./CueQueue";
 import { MicrophoneMonitor } from "./MicrophoneMonitor";
 import { ProductionSelector } from "./ProductionSelector";
 import { AudioTrackConsole } from "./AudioTrackConsole";
-import type { DemoTimeline } from "@/lib/demo-timeline";
+import type { DemoRecording } from "@/lib/demo-timeline";
 
 const HologramAvatar = dynamic(() => import("./HologramAvatar").then((module) => module.HologramAvatar), { ssr: false });
 
-export function OperatorExperience({ initialShow, catalog, timeline }: { initialShow: Show; catalog: ProductionCatalog; timeline: DemoTimeline }) {
+export function OperatorExperience({ initialShow, catalog, recordings }: { initialShow: Show; catalog: ProductionCatalog; recordings: DemoRecording[] }) {
   const [demonstrationMode, setDemonstrationMode] = useState<"audio-replay" | "live-mic">("audio-replay");
   const [show, setShow] = useState<Show>(initialShow);
   const [hydrated, setHydrated] = useState(false);
@@ -40,7 +40,7 @@ export function OperatorExperience({ initialShow, catalog, timeline }: { initial
     {storageWarning ? <p className="operation-alert" role="alert">브라우저 저장소를 사용할 수 없습니다. 현재 창에서는 선택한 대본을 사용하지만 새로고침하면 다시 선택해야 합니다.</p> : null}
     {/* Only one input and one audience publisher exist. Unmount releases media,
         pending permission requests, recognition generations and publisher lock. */}
-    {demonstrationMode === "audio-replay" ? <AudioTrackConsole timeline={timeline} /> : <PerformanceConsole key={`${show.id}-${revision}-${intermission}-${asrSource}`} show={show} catalog={catalog} intermission={intermission} onIntermission={setIntermission} onShow={replaceShow} asrSource={asrSource} onASRSource={setASRSource} />}
+    {demonstrationMode === "audio-replay" ? <AudioTrackConsole recordings={recordings} /> : <PerformanceConsole key={`${show.id}-${revision}-${intermission}-${asrSource}`} show={show} catalog={catalog} intermission={intermission} onIntermission={setIntermission} onShow={replaceShow} asrSource={asrSource} onASRSource={setASRSource} />}
   </main>;
 }
 

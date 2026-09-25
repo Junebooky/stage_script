@@ -1,27 +1,61 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTimelineDemonstration } from "@/hooks/use-recording-replay";
 import { useAudiencePublisher } from "@/hooks/use-audience-publisher";
-import { demoClock, timelineQueue, type DemoTimeline } from "@/lib/demo-timeline";
+import { demoClock, timelineQueue, type DemoRecording } from "@/lib/demo-timeline";
 import { localBackendUrl } from "@/lib/local-runtime";
 import type { AudienceView } from "@/lib/audience-protocol";
 import { CaptionDisplay } from "./CaptionDisplay";
 import { CueQueue } from "./CueQueue";
 
-const publicTrack = "/M5-2_외로운별_0420.wav";
 const ignorePaint = () => {};
+const recordingSource = (recording: DemoRecording, kind = recording.defaultAudioSource) => kind === "registered"
+  ? { kind: "registered", url: localBackendUrl(`/replay-recordings/${recording.recordingId}/audio`), label: `${recording.audioFileName} · 로컬 서버` }
+  : { kind: "public", url: recording.publicAudioPath, label: recording.audioFileName };
 
-export function AudioTrackConsole({ timeline }: { timeline: DemoTimeline }) {
-  const [source, setSource] = useState({ url: publicTrack, label: "M5-2_외로운별_0420.wav", kind: "public" });
+export function AudioTrackConsole({ recordings }: { recordings: DemoRecording[] }) {
+  const [recordingId, setRecordingId] = useState(recordings[0]!.recordingId);
+  const timeline = recordings.find((item) => item.recordingId === recordingId)!;
+  const [source, setSource] = useState(() => recordingSource(timeline));
+  const [busy, setBusy] = useState(false);
+  const [fileError, setFileError] = useState<string | null>(null);
+  const attemptRef = useRef(0);
+  useEffect(() => () => { attemptRef.current++; }, []);
   useEffect(() => () => { if (source.kind === "file") URL.revokeObjectURL(source.url); }, [source]);
-  return <AudioTrackSession key={source.url} timeline={timeline} source={source} onSource={setSource} />;
+  async function chooseFile(file: File) {
+    const attempt = ++attemptRef.current;
+    setBusy(true); setFileError(null);
+    try {
+      const digest = await crypto.subtle.digest("SHA-256", await file.arrayBuffer());
+      const hash = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
+      if (attempt !== attemptRef.current) return;
+      const matched = recordings.find((item) => item.sourceAudioSha256 === hash);
+      if (matched) setRecordingId(matched.recordingId);
+      // Unknown files stay on the explicitly selected schedule, with the same
+      // duration guard and unverified-edit warning; never guess from filenames.
+      setSource({ url: URL.createObjectURL(file), label: `${file.name}${matched ? " · 등록 원본 확인" : " · 원본 해시 미확인"}`, kind: "file" });
+    } catch { if (attempt === attemptRef.current) setFileError("파일을 읽지 못했습니다. 원본 음원을 다시 선택하세요."); }
+    finally { if (attempt === attemptRef.current) setBusy(false); }
+  }
+  return <>
+    <label className="demo-number-select">시연 넘버 <select aria-label="시연 넘버" value={recordingId} disabled={busy} onChange={(event) => {
+      attemptRef.current++; setFileError(null);
+      const next = recordings.find((item) => item.recordingId === event.target.value)!;
+      setRecordingId(next.recordingId); setSource(recordingSource(next));
+    }}>{recordings.map((item) => <option key={item.recordingId} value={item.recordingId}>{item.numberId} · {item.title} · {item.cues.length} cues</option>)}</select></label>
+    {busy ? <p role="status">음원 확인 중… 등록 원본은 넘버가 자동 선택됩니다.</p> : null}
+    {fileError ? <p role="alert">{fileError}</p> : null}
+    <AudioTrackSession key={`${recordingId}-${source.url}`} timeline={timeline} source={source} onSource={setSource} onFile={chooseFile} busy={busy} />
+  </>;
 }
 
-function AudioTrackSession({ timeline, source, onSource }: {
-  timeline: DemoTimeline;
+function AudioTrackSession({ timeline, source, onSource, onFile, busy }: {
+  timeline: DemoRecording;
   source: { url: string; label: string; kind: string };
   onSource: (source: { url: string; label: string; kind: string }) => void;
+  onFile: (file: File) => Promise<void>;
+  busy: boolean;
 }) {
   const replay = useTimelineDemonstration(timeline);
   const segment = timeline.script.segments[replay.index] ?? null;
@@ -42,16 +76,16 @@ function AudioTrackSession({ timeline, source, onSource }: {
   }, [output.authority, replay.manual, replay.resync]);
   const queue = useMemo(() => timelineQueue(timeline, replay.index, replay.ended), [timeline, replay.index, replay.ended]);
   // Prevent presenting a truncated/different-length recording as the R001 demo.
-  const durationMismatch = replay.duration > 0 && Math.abs(replay.duration - 226.138479) > 1;
+  const durationMismatch = replay.duration > 0 && Math.abs(replay.duration * 1000 - timeline.durationMs) > 1000;
   useEffect(() => { if (durationMismatch) replay.stop(); }, [durationMismatch, replay.stop]);
 
   return <section className="demo-mode-panel" aria-label="음원 시연 콘솔" data-demo-state={replay.playing ? "playing" : replay.ended ? "ended" : replay.active ? "paused" : "ready"}>
     <div className="demo-transport">
-      <button className="demo-primary" onClick={() => { if (output.authority) void replay.toggle(); }} disabled={!output.authority || durationMismatch}>
+      <button className="demo-primary" onClick={() => { if (output.authority) void replay.toggle(); }} disabled={!output.authority || durationMismatch || busy}>
         {replay.playing ? "일시정지" : replay.ended ? "다시 재생" : replay.active ? "재생 계속" : "재생 시작"}
       </button>
       <button onClick={replay.stop} disabled={!output.authority || !replay.active}>정지</button>
-      <span className="demo-act-status">M05-2 · {replay.ended ? "완료" : replay.playing ? "시연 중" : "음원 시연 준비"}</span>
+      <span className="demo-act-status">{timeline.numberId} · {replay.ended ? "완료" : replay.playing ? "시연 중" : "음원 시연 준비"}</span>
       <span className="demo-connection" data-ready={output.connected}>{output.connected ? "● 관객 연결됨" : "○ 관객 미연결 · 미리보기"}</span>
     </div>
     <p className="operation-note">기준 음원 타임라인 시연 · 실제 ASR 인식이나 live latency 측정이 아닙니다.</p>
@@ -60,13 +94,13 @@ function AudioTrackSession({ timeline, source, onSource }: {
       onPlay={replay.sync} onPause={replay.sync} onEnded={replay.sync} onSeeked={replay.sync} onError={replay.fail} />
     <div className="demo-audio-track">
       <div className="demo-track-label"><strong>{source.label}</strong><time data-testid="demo-timecode">{demoClock(replay.time)} / {demoClock(replay.duration)}</time></div>
-      <input type="range" min="0" max={replay.duration || 1} step="0.01" value={replay.time} aria-label="음원 탐색" disabled={!output.authority || !replay.duration || durationMismatch} onChange={(event) => { if (output.authority) replay.seek(Number(event.target.value)); }} />
-      <label className="file-button">음원 파일 선택<input type="file" accept="audio/*,.wav" aria-label="시연 음원 파일 선택" disabled={!output.authority} onChange={(event) => {
+      <input type="range" min="0" max={replay.duration || 1} step="0.01" value={replay.time} aria-label="음원 탐색" disabled={!output.authority || !replay.duration || durationMismatch || busy} onChange={(event) => { if (output.authority) replay.seek(Number(event.target.value)); }} />
+      <label className="file-button">음원 파일 선택<input type="file" accept="audio/*,.wav" aria-label="시연 음원 파일 선택" disabled={!output.authority || busy} onChange={(event) => {
         const file = event.target.files?.[0];
-        if (file && output.authority) { replay.stop(); onSource({ url: URL.createObjectURL(file), label: file.name, kind: "file" }); }
+        if (file && output.authority) { replay.stop(); void onFile(file); }
       }} /></label>
     </div>
-    {output.error || replay.error || durationMismatch ? <p className="operation-alert" role="alert">{output.error ?? (durationMismatch ? "R001 기준 음원(226.138초)과 길이가 다릅니다. 편집하지 않은 원본 음원을 선택하세요." : replay.error)}</p> : null}
+    {output.error || replay.error || durationMismatch ? <p className="operation-alert" role="alert">{output.error ?? (durationMismatch ? `${timeline.recordingId} 기준 음원(${(timeline.durationMs / 1000).toFixed(3)}초)과 길이가 다릅니다. 편집하지 않은 원본 음원을 선택하세요.` : replay.error)}</p> : null}
     <div className="performance-layout demo-layout">
       <section className="stage-output demo-track-stage" aria-label="Stage caption output" data-source="reference-timeline-demo">
         <header className="output-heading"><div><span className="eyebrow">CANONICAL / TRACK DEMO</span><h2>무대 송출 자막</h2></div><span className="output-badge">{segment ? "ON AIR" : "대기"}</span></header>
@@ -85,13 +119,13 @@ function AudioTrackSession({ timeline, source, onSource }: {
     </div>
     <details className="engineering-settings"><summary>엔지니어링 설정 (Advanced Settings)</summary>
       <div className="operator-settings">
-        <label>음원 위치 <select aria-label="시연 음원 위치" value={source.kind} disabled={!output.authority} onChange={(event) => {
+        <label>음원 위치 <select aria-label="시연 음원 위치" value={source.kind} disabled={!output.authority || busy} onChange={(event) => {
           replay.stop();
-          onSource(event.target.value === "registered" ? { kind: "registered", url: localBackendUrl(`/replay-recordings/${timeline.recordingId}/audio`), label: "R001 등록 원본 · 로컬 서버" } : { kind: "public", url: publicTrack, label: "M5-2_외로운별_0420.wav" });
+          onSource(recordingSource(timeline, event.target.value === "registered" ? "registered" : "public"));
         }}><option value="public">public/ 음원</option><option value="registered">등록 원본 · localhost:8000</option>{source.kind === "file" ? <option value="file">선택한 파일</option> : null}</select></label>
         <a href="/rehearsal">저장 ASR replay · 프로필 · 분석 로그 ↗</a>
       </div>
-      <p className="operation-note">R001 전용 27개 큐 · canonical 36개는 변경하지 않습니다. Silver reference 기반 연출이며 정확도 평가에 사용하지 않습니다. 다른 편집본은 길이가 같아도 동기화를 보장하지 않습니다. 파일은 이 브라우저에서만 재생하며 서버에 업로드하지 않습니다.</p>
+      <p className="operation-note">{timeline.recordingId} 전용 {timeline.cues.length}개 큐 · canonical {timeline.canonicalCueCount}개는 변경하지 않습니다. Silver reference 기반 연출이며 독립적인 청취 검증 전입니다. 다른 편집본은 길이가 같아도 동기화를 보장하지 않습니다. 파일은 이 브라우저에서만 재생하며 서버에 업로드하지 않습니다.</p>
     </details>
   </section>;
 }

@@ -7,6 +7,17 @@ export interface DemoTimeline {
   cues: { cueId: string; referenceStartMs: number }[];
 }
 
+export interface DemoRecording extends DemoTimeline {
+  numberId: string;
+  title: string;
+  durationMs: number;
+  sourceAudioSha256: string;
+  audioFileName: string;
+  publicAudioPath: string;
+  defaultAudioSource: "public" | "registered";
+  canonicalCueCount: number;
+}
+
 export function validateDemoTimeline(timeline: DemoTimeline): DemoTimeline {
   if (!timeline.cues.length || timeline.cues.length !== timeline.script.segments.length ||
     timeline.cues.some((cue, i) => cue.cueId !== timeline.script.segments[i]?.id ||

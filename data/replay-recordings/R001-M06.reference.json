@@ -1,0 +1,385 @@
+{
+  "version": 1,
+  "recordingId": "R001-M06",
+  "canonicalFingerprint": "669c84ae",
+  "quality": "silver-reference",
+  "basis": "asr-assisted-reference",
+  "provenance": "Groq whisper-large-v3 raw word timestamps from run-7627b2a5-7754-43d2-9572-744ee2438366. Offline monotonic lyric alignment preserving sung filler tokens. No segment-time interpolation. For explicit track demonstration and downstream evaluation only; never live ASR input. Independent acoustic review pending.",
+  "sourceAudioSha256": "a9c157e2b5e81702fb8683a17b7fa267462e70c18cb282f28f136d393a557866",
+  "durationMs": 136000,
+  "humanConfirmed": false,
+  "sampleCount": 1,
+  "fallbackEnabled": false,
+  "promoted": false,
+  "originalReviewRequiredCueIds": [
+    "M06_C011",
+    "M06_C012",
+    "M06_C013",
+    "M06_C014",
+    "M06_C015",
+    "M06_C016",
+    "M06_C017",
+    "M06_C018",
+    "M06_C024",
+    "M06_C025",
+    "M06_C026"
+  ],
+  "cues": [
+    {
+      "cueId": "M06_C001",
+      "referenceStartMs": 880,
+      "referenceEndMs": 5460,
+      "timingBasis": "raw-asr-word-estimate",
+      "firstWordIndex": 0,
+      "lastWordIndex": 3,
+      "matchScore": 1,
+      "humanConfirmed": false,
+      "warnings": [
+        "ASR word estimate; independent audio onset review required."
+      ]
+    },
+    {
+      "cueId": "M06_C002",
+      "referenceStartMs": 5460,
+      "referenceEndMs": 11040,
+      "timingBasis": "raw-asr-word-estimate",
+      "firstWordIndex": 4,
+      "lastWordIndex": 8,
+      "matchScore": 1,
+      "humanConfirmed": false,
+      "warnings": [
+        "ASR word estimate; independent audio onset review required."
+      ]
+    },
+    {
+      "cueId": "M06_C003",
+      "referenceStartMs": 12940,
+      "referenceEndMs": 17360,
+      "timingBasis": "raw-asr-word-estimate",
+      "firstWordIndex": 9,
+      "lastWordIndex": 13,
+      "matchScore": 1,
+      "humanConfirmed": false,
+      "warnings": [
+        "ASR word estimate; independent audio onset review required."
+      ]
+    },
+    {
+      "cueId": "M06_C004",
+      "referenceStartMs": 17360,
+      "referenceEndMs": 23500,
+      "timingBasis": "raw-asr-word-estimate",
+      "firstWordIndex": 14,
+      "lastWordIndex": 18,
+      "matchScore": 1,
+      "humanConfirmed": false,
+      "warnings": [
+        "ASR word estimate; independent audio onset review required."
+      ]
+    },
+    {
+      "cueId": "M06_C005",
+      "referenceStartMs": 24560,
+      "referenceEndMs": 29480,
+      "timingBasis": "raw-asr-word-estimate",
+      "firstWordIndex": 19,
+      "lastWordIndex": 22,
+      "matchScore": 1,
+      "humanConfirmed": false,
+      "warnings": [
+        "ASR word estimate; independent audio onset review required."
+      ]
+    },
+    {
+      "cueId": "M06_C006",
+      "referenceStartMs": 29480,
+      "referenceEndMs": 35780,
+      "timingBasis": "raw-asr-word-estimate",
+      "firstWordIndex": 23,
+      "lastWordIndex": 26,
+      "matchScore": 1,
+      "humanConfirmed": false,
+      "warnings": [
+        "ASR word estimate; independent audio onset review required."
+      ]
+    },
+    {
+      "cueId": "M06_C007",
+      "referenceStartMs": 36120,
+      "referenceEndMs": 38880,
+      "timingBasis": "raw-asr-word-estimate",
+      "firstWordIndex": 27,
+      "lastWordIndex": 29,
+      "matchScore": 1,
+      "humanConfirmed": false,
+      "warnings": [
+        "ASR word estimate; independent audio onset review required."
+      ]
+    },
+    {
+      "cueId": "M06_C008",
+      "referenceStartMs": 38880,
+      "referenceEndMs": 41160,
+      "timingBasis": "raw-asr-word-estimate",
+      "firstWordIndex": 30,
+      "lastWordIndex": 32,
+      "matchScore": 1,
+      "humanConfirmed": false,
+      "warnings": [
+        "ASR word estimate; independent audio onset review required."
+      ]
+    },
+    {
+      "cueId": "M06_C009",
+      "referenceStartMs": 41160,
+      "referenceEndMs": 47620,
+      "timingBasis": "raw-asr-word-estimate",
+      "firstWordIndex": 33,
+      "lastWordIndex": 38,
+      "matchScore": 1,
+      "humanConfirmed": false,
+      "warnings": [
+        "ASR word estimate; independent audio onset review required."
+      ]
+    },
+    {
+      "cueId": "M06_C010",
+      "referenceStartMs": 49220,
+      "referenceEndMs": 52100,
+      "timingBasis": "raw-asr-word-estimate",
+      "firstWordIndex": 39,
+      "lastWordIndex": 42,
+      "matchScore": 1,
+      "humanConfirmed": false,
+      "warnings": [
+        "ASR word estimate; independent audio onset review required."
+      ]
+    },
+    {
+      "cueId": "M06_C011",
+      "referenceStartMs": 59880,
+      "referenceEndMs": 65000,
+      "timingBasis": "raw-asr-word-estimate",
+      "firstWordIndex": 43,
+      "lastWordIndex": 49,
+      "matchScore": 1,
+      "humanConfirmed": false,
+      "warnings": [
+        "ASR word estimate; independent audio onset review required.",
+        "Original CLI review: Low alignment confidence"
+      ]
+    },
+    {
+      "cueId": "M06_C012",
+      "referenceStartMs": 65000,
+      "referenceEndMs": 68140,
+      "timingBasis": "raw-asr-word-estimate",
+      "firstWordIndex": 50,
+      "lastWordIndex": 52,
+      "matchScore": 1,
+      "humanConfirmed": false,
+      "warnings": [
+        "ASR word estimate; independent audio onset review required.",
+        "Original CLI review: Low alignment confidence"
+      ]
+    },
+    {
+      "cueId": "M06_C013",
+      "referenceStartMs": 68860,
+      "referenceEndMs": 72940,
+      "timingBasis": "raw-asr-word-estimate",
+      "firstWordIndex": 53,
+      "lastWordIndex": 57,
+      "matchScore": 1,
+      "humanConfirmed": false,
+      "warnings": [
+        "ASR word estimate; independent audio onset review required.",
+        "Original CLI review: Low alignment confidence"
+      ]
+    },
+    {
+      "cueId": "M06_C014",
+      "referenceStartMs": 72940,
+      "referenceEndMs": 75400,
+      "timingBasis": "raw-asr-word-estimate",
+      "firstWordIndex": 58,
+      "lastWordIndex": 61,
+      "matchScore": 1,
+      "humanConfirmed": false,
+      "warnings": [
+        "ASR word estimate; independent audio onset review required.",
+        "Original CLI review: Low alignment confidence"
+      ]
+    },
+    {
+      "cueId": "M06_C015",
+      "referenceStartMs": 76840,
+      "referenceEndMs": 79660,
+      "timingBasis": "raw-asr-word-estimate",
+      "firstWordIndex": 62,
+      "lastWordIndex": 65,
+      "matchScore": 0.78125,
+      "humanConfirmed": false,
+      "warnings": [
+        "ASR word estimate; independent audio onset review required.",
+        "Canonical/ASR text differs; canonical is unchanged.",
+        "Original CLI review: Low alignment confidence"
+      ]
+    },
+    {
+      "cueId": "M06_C016",
+      "referenceStartMs": 80240,
+      "referenceEndMs": 81900,
+      "timingBasis": "raw-asr-word-estimate",
+      "firstWordIndex": 66,
+      "lastWordIndex": 68,
+      "matchScore": 1,
+      "humanConfirmed": false,
+      "warnings": [
+        "ASR word estimate; independent audio onset review required.",
+        "Original CLI review: Low alignment confidence"
+      ]
+    },
+    {
+      "cueId": "M06_C017",
+      "referenceStartMs": 81900,
+      "referenceEndMs": 84080,
+      "timingBasis": "raw-asr-word-estimate",
+      "firstWordIndex": 69,
+      "lastWordIndex": 71,
+      "matchScore": 1,
+      "humanConfirmed": false,
+      "warnings": [
+        "ASR word estimate; independent audio onset review required.",
+        "Original CLI review: Low alignment confidence"
+      ]
+    },
+    {
+      "cueId": "M06_C018",
+      "referenceStartMs": 84400,
+      "referenceEndMs": 88240,
+      "timingBasis": "raw-asr-word-estimate",
+      "firstWordIndex": 72,
+      "lastWordIndex": 75,
+      "matchScore": 1,
+      "humanConfirmed": false,
+      "warnings": [
+        "ASR word estimate; independent audio onset review required.",
+        "Original CLI review: Low alignment confidence"
+      ]
+    },
+    {
+      "cueId": "M06_C019",
+      "referenceStartMs": 88460,
+      "referenceEndMs": 93520.004,
+      "timingBasis": "raw-asr-word-estimate",
+      "firstWordIndex": 76,
+      "lastWordIndex": 80,
+      "matchScore": 0.8409090909090909,
+      "humanConfirmed": false,
+      "warnings": [
+        "ASR word estimate; independent audio onset review required.",
+        "Canonical/ASR text differs; canonical is unchanged."
+      ]
+    },
+    {
+      "cueId": "M06_C020",
+      "referenceStartMs": 93520.004,
+      "referenceEndMs": 96479.996,
+      "timingBasis": "raw-asr-word-estimate",
+      "firstWordIndex": 81,
+      "lastWordIndex": 84,
+      "matchScore": 0.75,
+      "humanConfirmed": false,
+      "warnings": [
+        "ASR word estimate; independent audio onset review required.",
+        "Canonical/ASR text differs; canonical is unchanged."
+      ]
+    },
+    {
+      "cueId": "M06_C021",
+      "referenceStartMs": 96920,
+      "referenceEndMs": 98720,
+      "timingBasis": "raw-asr-word-estimate",
+      "firstWordIndex": 85,
+      "lastWordIndex": 87,
+      "matchScore": 1,
+      "humanConfirmed": false,
+      "warnings": [
+        "ASR word estimate; independent audio onset review required."
+      ]
+    },
+    {
+      "cueId": "M06_C022",
+      "referenceStartMs": 98720,
+      "referenceEndMs": 100820,
+      "timingBasis": "raw-asr-word-estimate",
+      "firstWordIndex": 88,
+      "lastWordIndex": 89,
+      "matchScore": 1,
+      "humanConfirmed": false,
+      "warnings": [
+        "ASR word estimate; independent audio onset review required."
+      ]
+    },
+    {
+      "cueId": "M06_C023",
+      "referenceStartMs": 101060,
+      "referenceEndMs": 104820,
+      "timingBasis": "raw-asr-word-estimate",
+      "firstWordIndex": 90,
+      "lastWordIndex": 96,
+      "matchScore": 1,
+      "humanConfirmed": false,
+      "warnings": [
+        "ASR word estimate; independent audio onset review required."
+      ]
+    },
+    {
+      "cueId": "M06_C024",
+      "referenceStartMs": 104500,
+      "referenceEndMs": 109860,
+      "timingBasis": "raw-asr-word-estimate",
+      "firstWordIndex": 97,
+      "lastWordIndex": 101,
+      "matchScore": 0.7825160256410256,
+      "humanConfirmed": false,
+      "warnings": [
+        "ASR word estimate; independent audio onset review required.",
+        "Canonical/ASR text differs; canonical is unchanged.",
+        "Raw word overlaps the preceding word; timestamps retained without correction.",
+        "Original CLI review: Approximate span timing; word timestamps or human review required"
+      ]
+    },
+    {
+      "cueId": "M06_C025",
+      "referenceStartMs": 109780,
+      "referenceEndMs": 113060,
+      "timingBasis": "raw-asr-word-estimate",
+      "firstWordIndex": 102,
+      "lastWordIndex": 104,
+      "matchScore": 1,
+      "humanConfirmed": false,
+      "warnings": [
+        "ASR word estimate; independent audio onset review required.",
+        "Raw word overlaps the preceding word; timestamps retained without correction.",
+        "Original CLI review: Approximate span timing; word timestamps or human review required"
+      ]
+    },
+    {
+      "cueId": "M06_C026",
+      "referenceStartMs": 113060,
+      "referenceEndMs": 119500,
+      "timingBasis": "raw-asr-word-estimate",
+      "firstWordIndex": 105,
+      "lastWordIndex": 108,
+      "matchScore": 1,
+      "humanConfirmed": false,
+      "warnings": [
+        "ASR word estimate; independent audio onset review required.",
+        "Original CLI review: Approximate span timing; word timestamps or human review required"
+      ]
+    }
+  ],
+  "absentCueIds": []
+}

@@ -28,9 +28,9 @@ function speak(runtime: ScriptFollowingEngine, text: string, at: number, utteran
 }
 
 describe("M05-2 canonical foundation", () => {
-  it("is the sole default real dataset, with 36 immutable canonical cues and unique stable IDs", () => {
+  it("remains the default real dataset, with 36 immutable canonical cues and unique stable IDs", () => {
     expect(catalog.defaultNumberId).toBe("M05-2");
-    expect(catalog.datasets).toHaveLength(1);
+    expect(catalog.datasets.map((dataset) => dataset.id)).toEqual(["M05-2", "M06"]);
     expect(cues).toHaveLength(36);
     expect(cues.map((cue) => cue.id)).toEqual(Array.from({ length: 36 }, (_, index) => `M05-2_C${String(index + 1).padStart(3, "0")}`));
     expect(cues[0]!.captions[0]!.text).toBe("창가로 스며드는 외로운 저 달빛");
@@ -47,7 +47,7 @@ describe("M05-2 canonical foundation", () => {
     expect(cues[0]!.metadata?.repeatGroup).toBe(cues[17]!.metadata?.repeatGroup);
   });
   it("never accepts audio/ASR as missing canonical material", () => {
-    expect(() => requireCanonical(catalog, "M06")).toThrow("CANONICAL SCRIPT REQUIRED");
+    expect(() => requireCanonical(catalog, "MISSING")).toThrow("CANONICAL SCRIPT REQUIRED");
     expect(() => analyzeNumberRehearsal(show, "M06", transcript(), { rehearsalId: "x" })).toThrow("CANONICAL SCRIPT REQUIRED");
     expect(parseShow(show)).toEqual(show);
   });
