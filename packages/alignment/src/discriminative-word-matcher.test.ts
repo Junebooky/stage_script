@@ -7,12 +7,49 @@ const hypothesis = (text: string): StreamingHypothesis => ({ text: normalizeKore
 const context = (rawTranscript: string, target: ScriptSegment, others: ScriptSegment[] = []): ScriptContext => ({ rawTranscript, normalizedOffset: 0, candidateOffset: 0, mode: "NORMAL", operatingMode: "PERFORMANCE_LOCAL", nearbySegments: [target, ...others] });
 const matcher = new DiscriminativeWordMatcher();
 
+describe("production leading-token evidence", () => {
+  const live = (text: string) => ({ ...hypothesis(text), evidenceBasis: undefined });
+  it("accepts a unique two-syllable partial before the first word is complete", () => {
+    const target = cue("운명이 이끄는 세상");
+    expect(matcher.match(live("운명"), target, context("운명", target))).toMatchObject({ eligible: true, end: 2, reason: "leading-discriminative-prefix", earlyEvidence: { positionWeight: 1.5 } });
+  });
+  it.each(["그리고", "하지만", "그렇지만", "그러므로", "우리"])("requires later tokens after the functional opening %s", (word) => {
+    const target = cue(word + " 아름다운 세상이 펼쳐져요");
+    for (const input of [word.slice(0, 2), word]) expect(matcher.match(live(input), target, context(input, target)).eligible).toBe(false);
+    expect(matcher.match(live(word + " 아름다운"), target, context(word + " 아름다운", target)).eligible).toBe(true);
+  });
+  it.each(["운", "행운명", "운명아", "운전", "바다"])("does not manufacture a leading prefix from %s", (input) => {
+    const target = cue("운명이 이끄는 세상");
+    expect(matcher.match(live(input), target, context(input, target)).eligible).toBe(false);
+  });
+  it("blocks repeated and internal nearby collisions, including revised word extensions", () => {
+    const target = cue("운명이 이끄는 세상");
+    for (const other of [cue("운명은 저 멀리 있어", "other"), cue("내 슬픈 운명을 따라", "other")]) {
+      expect(matcher.match(live("운명"), target, context("운명", target, [other])).eligible).toBe(false);
+    }
+    expect(matcher.match(live("운명"), target, context("운명", target)).eligible).toBe(true);
+    expect(matcher.match(live("운명아"), target, context("운명아", target)).eligible).toBe(false);
+  });
+  it("applies the documented score and respects stricter authored thresholds", () => {
+    const target = cue("운명이 이끄는 세상"), ctx = context("운명", target);
+    const input = { ...live("운명"), confidence: .2 };
+    expect(matcher.match(input, target, ctx).score).toBeCloseTo(.955);
+    expect(matcher.match(input, target, { ...ctx, profile: { thresholds: { text: .99 } } as never }).eligible).toBe(false);
+  });
+  it("does not bypass missing speech or offset safety", () => {
+    const target = cue("운명이 이끄는 세상");
+    expect(matcher.match({ ...live("운명"), speechActive: false }, target, context("운명", target)).eligible).toBe(false);
+    expect(matcher.match(live("명"), target, { ...context("운명", target), normalizedOffset: 1 }).eligible).toBe(false);
+    expect(matcher.match(live("운명"), target, { ...context("운명", target), candidateOffset: 2 }).eligible).toBe(false);
+  });
+});
+
 describe("completed-word discriminative early policy", () => {
   it.each(["창가로", "어서", "걱정"])("accepts an exact unique completed prefix %s, not a final sentence", (word) => {
     const target = cue(word + " 새로운 노래를 불러요");
     const ctx = context(word, target, [cue("달빛 아래 잠들어요", "other")]);
     expect(new PrefixFuzzyMatcher().match(hypothesis(word), target, ctx).eligible).toBe(false);
-    expect(matcher.match(hypothesis(word), target, ctx)).toMatchObject({ eligible: true, fast: true, selectedAnchor: word, reason: "unique-completed-word-prefix" });
+    expect(matcher.match(hypothesis(word), target, ctx)).toMatchObject({ eligible: true, fast: true, selectedAnchor: word, reason: "leading-discriminative-prefix" });
   });
   it("does not cut an observed word to manufacture an exact prefix", () => {
     const target = cue("동이트기 전에 만나요");
@@ -27,10 +64,10 @@ describe("completed-word discriminative early policy", () => {
     const target = cue("창가로 새로운 노래");
     expect(matcher.match(hypothesis("창가로"), target, { ...context("창가로", target), mode }).eligible).toBe(false);
   });
-  it("does not use a speculative future candidate or unverified live word boundaries", () => {
+  it("shares leading evidence with live input but not speculative future candidates or missing raw boundaries", () => {
     const target = cue("창가로 새로운 노래");
     expect(matcher.match(hypothesis("창가로"), target, { ...context("창가로", target), candidateOffset: 1 }).eligible).toBe(false);
-    expect(matcher.match({ ...hypothesis("창가로"), evidenceBasis: undefined }, target, context("창가로", target)).eligible).toBe(false);
+    expect(matcher.match({ ...hypothesis("창가로"), evidenceBasis: undefined }, target, context("창가로", target)).eligible).toBe(true);
     expect(matcher.match(hypothesis("창가로"), target, { ...context("창가로", target), rawTranscript: undefined }).eligible).toBe(false);
   });
   it.each(["음", "어", "아", "저기", "우리", "내", "감사합니다"])("does not early-trigger filler/noise/post-take %s", (text) => {

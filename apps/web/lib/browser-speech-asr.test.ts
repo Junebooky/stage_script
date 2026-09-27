@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ScriptFollowingEngine } from "@stage/script-engine";
-import { demoScript } from "@stage/script-schema";
+import { ScriptFollowingEngine, ShowRuntime } from "@stage/script-engine";
+import { demoScript, type Show } from "@stage/script-schema";
 import { BrowserSpeechASRAdapter } from "./browser-speech-asr";
 
 class FakeRecognizer {
@@ -33,6 +33,23 @@ beforeEach(() => {
 afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); });
 
 describe("live speech recognition adapter", () => {
+  it("delivers a discriminative interim synchronously to the actual production ShowRuntime", () => {
+    const show: Show = { id: "production", title: "Production", locale: "ko-KR", acts: [{ id: "act", title: "Act", numbers: [{ id: "number", title: "Number", cues: [
+      { id: "cue", order: 1, type: "CAPTION", matchText: ["운명이 이끄는 저 먼 세상"], captions: [{ actor: "A", text: "운명이 이끄는 저 먼 세상" }] }
+    ] }] }] };
+    const runtime = new ShowRuntime(show); runtime.armAct(0, 0);
+    runtime.setReadiness({ microphone: true, asr: true, assets: true, output: true }); runtime.go(1);
+    const receive = vi.fn((hypothesis) => runtime.processHypothesis(hypothesis));
+    const adapter = new BrowserSpeechASRAdapter(receive, vi.fn()); adapter.start();
+    FakeRecognizer.instance.emit("운");
+    expect(runtime.snapshot().engine.currentIndex).toBe(-1);
+    FakeRecognizer.instance.emit("  운명  ");
+    // No timer or microtask flush between emission and these assertions.
+    expect(runtime.snapshot().engine.currentSegment?.id).toBe("cue");
+    expect(receive.mock.lastCall?.[0]).toMatchObject({ text: "운명", contextText: "운명", isFinal: false });
+    expect(vi.getTimerCount()).toBe(0);
+    adapter.stop();
+  });
   it("delivers interim text with a stable utterance id and suppresses duplicated finals", () => {
     const receive = vi.fn();
     const adapter = new BrowserSpeechASRAdapter(receive, vi.fn());

@@ -126,8 +126,9 @@ describe("M05-2 live conservative interim matching", () => {
   ]) it(`handles ${name} without waiting for a final result`, () => {
     expect(speak(engine(), text!, 100).currentSegment?.id).toBe(id(0));
   });
-  it("rejects two syllables, unrelated speech, and a shared short phrase", () => {
-    for (const text of ["창가", "그대", "이 밤", "점심을 먹으러 식당으로 가요"]) {
+  it("accepts a unique leading prefix but rejects unrelated speech and shared short phrases", () => {
+    expect(speak(engine(), "창가", 100).currentSegment?.id).toBe("M05-2_C001");
+    for (const text of ["그대", "이 밤", "점심을 먹으러 식당으로 가요"]) {
       const result = speak(engine(), text, 100);
       expect(result.currentSegment).toBeNull();
       expect(result.phase).toBe(normalizeKorean(text).length < 4 ? "MATCHING" : "UNMATCHED_SPEECH");

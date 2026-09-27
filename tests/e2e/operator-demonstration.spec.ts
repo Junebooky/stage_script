@@ -105,10 +105,11 @@ test("single mic button starts after readiness, mode switch aborts recognition a
   await audience.goto("/output");
   await expect(page.getByLabel("Show lifecycle")).toHaveAttribute("data-show-state", "ACT_LIVE");
   await page.evaluate(() => {
-    (window as unknown as { demoRecognition: { onresult: (event: unknown) => void } }).demoRecognition.onresult({ resultIndex: 0, results: { length: 1, 0: { isFinal: false, length: 1, 0: { transcript: "창가로 스며드는", confidence: .99 } } } });
+    // Real ShowRuntime/production matcher, two-syllable live interim; no saved-word flag.
+    (window as unknown as { demoRecognition: { onresult: (event: unknown) => void } }).demoRecognition.onresult({ resultIndex: 0, results: { length: 1, 0: { isFinal: false, length: 1, 0: { transcript: "창가", confidence: .99 } } } });
   });
   await expect(audience.getByRole("main")).toHaveAttribute("data-cue", "M05-2_C001");
-  await expect(page.getByLabel("Recognized speech")).toHaveText("창가로 스며드는");
+  await expect(page.getByLabel("Recognized speech")).toHaveText("창가");
   await page.getByRole("button", { name: "🎵 음원 시연 모드" }).click();
   await expect.poll(() => page.evaluate(() => (window as unknown as { demoStreams: MediaStream[] }).demoStreams.every((stream) => stream.getTracks().every((track) => track.readyState === "ended")))).toBe(true);
   await expect(audience.getByRole("main")).toHaveAttribute("data-kind", "black");

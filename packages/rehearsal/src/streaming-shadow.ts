@@ -1,4 +1,4 @@
-import { normalizeKorean, PrefixFuzzyMatcher, type MatchResult, type ScriptContext, type ScriptMatcher, type StreamingHypothesis } from "@stage/alignment";
+import { DiscriminativeWordMatcher, normalizeKorean, type MatchResult, type ScriptContext, type ScriptMatcher, type StreamingHypothesis } from "@stage/alignment";
 import { ScriptFollowingEngine, type RuntimeTelemetryEvent } from "@stage/script-engine";
 import type { PerformanceScript, ScriptSegment } from "@stage/script-schema";
 
@@ -19,10 +19,10 @@ export function revisionDiff(previous: string, current: string) {
   return { at: prefix, removed, added, kind: !removed && !added ? "unchanged" : !removed ? "addition" : !added ? "deletion" : "replacement" };
 }
 
-/** Measurement-only gate: baseline matching PLUS observed stability, never a
+/** Measurement-only gate: production matching PLUS observed stability, never a
  * relaxed performance matcher. No reference, saved-word flag or audience API. */
 export class StableShadowMatcher implements ScriptMatcher {
-  private baseline = new PrefixFuzzyMatcher();
+  private baseline = new DiscriminativeWordMatcher();
   private pending = new Map<string, { stream: string; anchor: string; since: number; text: string; updates: number }>();
   constructor(private readonly minimumMs = 150) {}
   match(h: StreamingHypothesis, cue: ScriptSegment, context: ScriptContext): MatchResult {

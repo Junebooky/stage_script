@@ -11,9 +11,9 @@ const event = (text: string, at: number, sequence: number, utterance_id = "a", i
 });
 
 describe("actual partial shadow measurement", () => {
-  it("keeps baseline performance policy: saved-word fast prefixes never activate", () => {
+  it("uses production leading evidence immediately while stability still needs another observation", () => {
     const report = evaluateStreamingShadows(script, [event("창가로", 1000, 0)]);
-    expect(report.immediate.emittedCount).toBe(0);
+    expect(report.immediate.emittedCount).toBe(1);
     expect(report.stable.emittedCount).toBe(0);
   });
   it("compares immediate vs retained evidence without a final result", () => {

@@ -32,12 +32,13 @@ export function useScriptFollower() {
   const publish = useCallback((next: ScriptEngineSnapshot) => setSnapshot(next), []);
 
   const processHypothesis = useCallback((hypothesis: StreamingHypothesis) => {
-    // Always show what was heard, even when it doesn't match or auto-advance is held.
-    setHeardText(hypothesis.text);
     const engine = engineRef.current!;
     const previousIndex = engine.snapshot().currentIndex;
     const matchingStartedAt = performance.now();
     const next = engine.processHypothesis(hypothesis);
+    // Synchronous raw interim → engine, before React updates or diagnostics.
+    // Normalization belongs to the engine; no debounce, RAF or final-result wait.
+    setHeardText(hypothesis.text);
     if (next.currentIndex !== previousIndex || hypothesis.isFinal) {
       console.debug("caption_match", { cue: next.currentIndex + 1, receivedAt: hypothesis.receivedAt, decisionMs: performance.now() - matchingStartedAt, final: Boolean(hypothesis.isFinal), advanced: next.currentIndex !== previousIndex, phase: next.phase });
     }

@@ -1,4 +1,4 @@
-import { editSimilarity, normalizeKorean, PrefixFuzzyMatcher, type MatchResult, type ScriptMatcher, type StreamingHypothesis } from "@stage/alignment";
+import { DiscriminativeWordMatcher, editSimilarity, normalizeKorean, type MatchResult, type ScriptMatcher, type StreamingHypothesis } from "@stage/alignment";
 import { parseCueProfiles, type CueProfile, type OperatingMode, type PerformanceScript, type ScriptSegment } from "@stage/script-schema";
 import { HypothesisCursor } from "./hypothesis-cursor";
 export { ShowRuntime, type ShowPhase, type ShowRuntimeSnapshot, type ShowRuntimeConfig, type RuntimeReadiness, type IntermissionOutput } from "./show-runtime";
@@ -108,7 +108,7 @@ export class ScriptFollowingEngine {
 
   constructor(
     private readonly script: PerformanceScript,
-    matcher: ScriptMatcher = new PrefixFuzzyMatcher(),
+    matcher: ScriptMatcher = new DiscriminativeWordMatcher(),
     config: Partial<EngineConfig> = {}
   ) {
     this.matcher = matcher;
@@ -262,6 +262,7 @@ export class ScriptFollowingEngine {
           mode: this.state.searchMode,
           operatingMode: this.config.operatingMode,
           rawTranscript: hypothesis.contextText ?? hypothesis.text,
+          normalizedTranscript: normalized,
           normalizedOffset: offset,
           nearbySegments: this.script.segments.slice(Math.max(0, index - 3), index + 4),
           profile,
@@ -332,7 +333,7 @@ export class ScriptFollowingEngine {
           cursorFloor: this.cursor.floor
         });
       }
-      this.cursor.consume(best.result.start, best.result.end, best.result.expected);
+      this.cursor.consume(best.result.start, best.result.end, best.result.expected, Boolean(best.result.earlyEvidence));
       this.state = this.trigger(
         segment,
         best.index,

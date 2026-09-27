@@ -6,6 +6,7 @@ export class HypothesisCursor {
   private cueStart: number | null = null;
   private expected = "";
   private checkpointed = false;
+  private earlyConsumed = false;
 
   get hasCue(): boolean { return this.cueStart !== null; }
 
@@ -16,6 +17,7 @@ export class HypothesisCursor {
     this.cueStart = null;
     this.expected = "";
     this.checkpointed = false;
+    this.earlyConsumed = false;
   }
 
   discard() {
@@ -24,6 +26,7 @@ export class HypothesisCursor {
     this.cueStart = null;
     this.expected = "";
     this.checkpointed = true;
+    this.earlyConsumed = false;
   }
 
   update(id: string, text: string): boolean {
@@ -33,8 +36,17 @@ export class HypothesisCursor {
     } else if (text === this.text) {
       return false;
     }
+    // The usual interim is append-only: no anchor relocation or suffix scan.
+    if (text.startsWith(this.text)) { this.text = text; return true; }
     let prefix = 0;
     while (prefix < Math.min(this.text.length, text.length) && this.text[prefix] === text[prefix]) prefix += 1;
+    if (this.earlyConsumed && prefix < this.floor) {
+      // A revision cancelling already-triggered prefix evidence is not a new
+      // utterance. Fence the entire rewrite rather than cascade to another cue.
+      this.text = text;
+      this.discard();
+      return true;
+    }
     let suffix = 0;
     while (suffix < Math.min(this.text.length, text.length) - prefix && this.text[this.text.length - 1 - suffix] === text[text.length - 1 - suffix]) suffix += 1;
 
@@ -81,10 +93,11 @@ export class HypothesisCursor {
     return this.expected.startsWith(this.text.slice(this.cueStart, end));
   }
 
-  consume(start: number, end: number, expected: string) {
+  consume(start: number, end: number, expected: string, early = false) {
     this.checkpointed = false;
     this.cueStart = start;
     this.floor = end;
     this.expected = expected;
+    this.earlyConsumed = early;
   }
 }

@@ -142,6 +142,7 @@ export class BrowserSpeechASRAdapter implements StreamingASRAdapter {
     };
     this.recognition.onresult = (event) => {
       if (!this.shouldRestart) return;
+      const receivedAt = performance.now();
       for (const index of this.resultText.keys()) {
         if (index >= event.results.length) this.resultText.delete(index);
       }
@@ -149,19 +150,24 @@ export class BrowserSpeechASRAdapter implements StreamingASRAdapter {
         if (this.finalized.has(index)) continue;
         const result = event.results[index];
         const alternative = result?.[0];
-        if (!result || !alternative?.transcript.trim()) continue;
-        this.resultText.set(index, alternative.transcript.trim());
+        const text = alternative?.transcript.trim();
+        if (!result || !alternative || !text) continue;
+        this.resultText.set(index, text);
         if (result.isFinal) this.finalized.add(index);
+        // Web Speech result indexes are ordered. No per-interim entry array,
+        // filter/sort pipeline, debounce or transcript normalization is needed.
+        let contextText = "";
+        for (let position = 0; position <= index; position++) contextText += this.resultText.get(position) ?? "";
         this.onHypothesis({
           utteranceId: `browser-${this.session}-${index}`,
           streamId: `browser-session-${this.session}`,
           // A result boundary is not necessarily a word boundary (e.g. 어 + 둠).
           // Do not insert a space that makes a real syllable look like a filler.
-          contextText: [...this.resultText.entries()].filter(([position]) => position <= index).sort(([left], [right]) => left - right).map(([, text]) => text).join(""),
-          text: alternative.transcript.trim(),
+          contextText,
+          text,
           confidence: alternative.confidence || (result.isFinal ? 0.9 : 0.82),
           isFinal: result.isFinal,
-          receivedAt: performance.now(),
+          receivedAt,
           speechActive: true
         });
       }

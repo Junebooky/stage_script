@@ -25,6 +25,8 @@ export interface StreamingHypothesis {
 }
 
 export interface ScriptContext {
+  /** Trusted engine-owned normalization of the full cumulative transcript. */
+  normalizedTranscript?: string;
   rawTranscript?: string;
   normalizedOffset?: number;
   candidateOffset: number;
@@ -50,6 +52,7 @@ export interface MatchResult {
   end: number;
   fast: boolean;
   selectedAnchor?: string;
+  earlyEvidence?: { positionWeight: number; margin: number; threshold: number };
   components?: { text: number; anchor: number; sequence: number; timing: number; asr: number | null; speech: number };
 }
 
@@ -117,7 +120,7 @@ export class PrefixFuzzyMatcher implements ScriptMatcher {
 
   match(hypothesis: StreamingHypothesis, segment: ScriptSegment, context: ScriptContext): MatchResult {
     if (context.operatingMode === "PERFORMANCE_LOCAL") return matchPerformance(hypothesis, segment, context);
-    const observed = normalizeKorean(hypothesis.text);
+    const observed = context.normalizedTranscript?.slice(context.normalizedOffset ?? 0) ?? normalizeKorean(hypothesis.text);
     const scriptPrior = context.mode === "NORMAL"
       ? Math.max(0.25, 1 - context.candidateOffset * 0.18)
       : context.mode === "RESYNC"
@@ -161,7 +164,7 @@ export class PrefixFuzzyMatcher implements ScriptMatcher {
 
 /** Conservative local performance policy; demo's two-syllable policy is isolated above. */
 function matchPerformance(hypothesis: StreamingHypothesis, segment: ScriptSegment, context: ScriptContext): MatchResult {
-  const observed = normalizeKorean(hypothesis.text);
+  const observed = context.normalizedTranscript?.slice(context.normalizedOffset ?? 0) ?? normalizeKorean(hypothesis.text);
   const sequence = Math.max(0.3, 1 - context.candidateOffset * 0.2);
   const asr = availableConfidence(hypothesis.confidence);
   const speech = hypothesis.speechActive ? 1 : 0;
