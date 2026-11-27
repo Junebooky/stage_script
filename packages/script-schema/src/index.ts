@@ -224,3 +224,6 @@ export function flattenShow(show: Show, actId?: string): PerformanceScript {
 
 export const demoScript = parseScript(rawDemoScript);
 export const demoShow = migrateScriptToShow(demoScript, "demo-show");
+
+// Independent authoring contract; legacy parseScript and parseShow remain unchanged.
+export * from "./production-package";
