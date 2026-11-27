@@ -230,3 +230,6 @@ function matchPerformance(hypothesis: StreamingHypothesis, segment: ScriptSegmen
   }
   return best;
 }
+
+// Offline authoring diagnostics; independent of live matching decisions.
+export { analyzeProductionEvidence, type ProductionEvidenceReport, type CueEvidence, type AlternativeEvidence, type PrefixProbe } from "./production-evidence-analysis";
