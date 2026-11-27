@@ -17,7 +17,7 @@ export interface FrameControlSnapshot {
 }
 /** Trusted matcher decision, not an ASR transcript. Generation must be captured at
  * audio ingestion, never stamped on a delayed result at delivery time. */
-export interface MatchedCueEvent { sessionId: string; generation: number; sequence: number; cueId: string }
+export interface MatchedCueEvent { sessionId: string; generation: number; sequence: number; cueId: string; skippedCueId?: string }
 
 /** Experimental draft-only state machine. Not wired to ShowRuntime or a projector.
  * All automatic changes are forward, local to the selected act and explicit frames.
@@ -164,14 +164,22 @@ export class ProductionFrameController {
     return true;
   }
 
-  /** A successful match advances at most one expected tracking cue. No
-   * matcher lookahead is introduced here; future integration must preserve
-   * validated existing lookahead without permitting frame/manual-barrier skips. */
+  /** Accept exact-next or an engine-validated single skip INSIDE an already
+   * visible frame. Never skip an unseen output frame or manual barrier. */
   acceptMatch(event: MatchedCueEvent): boolean {
     if (this.mode !== "BLACK_AUTO" && this.mode !== "AUTO_LIVE") return false;
     if (event.sessionId !== this.sessionId || event.generation !== this.generation || !Number.isSafeInteger(event.sequence) || event.sequence < 0 || event.sequence <= this.lastSequence) return false;
     this.lastSequence = event.sequence;
-    const cue = this.cueInAct(this.expected);
+    let matchedIndex = this.expected;
+    const expectedCue = this.cueInAct(this.expected);
+    if (!expectedCue) return false;
+    if (event.skippedCueId !== undefined) {
+      const current = this.frameInAct(this.position);
+      if (this.mode !== "AUTO_LIVE" || this.tracking < 0 || this.tracking + 1 !== this.expected ||
+          !current || expectedCue.frameId !== current.id || expectedCue.id !== event.skippedCueId) return false;
+      matchedIndex += 1;
+    }
+    const cue = this.cueInAct(matchedIndex);
     if (!cue || cue.id !== event.cueId) return false;
     const targetIndex = cue.frameId === undefined ? undefined : this.frameIndex.get(cue.frameId);
     if (this.mode === "BLACK_AUTO" && targetIndex !== this.position + 1) return false;
@@ -180,7 +188,7 @@ export class ProductionFrameController {
       if (targetIndex !== this.position + 1 || !this.isAudibleText(target) || target.trigger.kind !== "SPEECH" || target.trigger.cueId !== cue.id) return false;
       this.paint(targetIndex, target);
     }
-    this.tracking = this.expected;
+    this.tracking = matchedIndex;
     this.expected = this.cueInAct(this.tracking + 1) ? this.tracking + 1 : -1;
     this.mode = "AUTO_LIVE";
     return true;
