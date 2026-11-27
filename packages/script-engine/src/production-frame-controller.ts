@@ -11,12 +11,13 @@ export interface FrameControlSnapshot {
   frameId: string | null;
   trackingCueId: string | null;
   expectedCueId: string | null;
+  sessionId: string;
   generation: number;
   view: ControlledView;
 }
 /** Trusted matcher decision, not an ASR transcript. Generation must be captured at
  * audio ingestion, never stamped on a delayed result at delivery time. */
-export interface MatchedCueEvent { generation: number; sequence: number; cueId: string }
+export interface MatchedCueEvent { sessionId: string; generation: number; sequence: number; cueId: string }
 
 /** Experimental draft-only state machine. Not wired to ShowRuntime or a projector.
  * All automatic changes are forward, local to the selected act and explicit frames.
@@ -33,6 +34,7 @@ export class ProductionFrameController {
   private position = -1;
   private tracking = -1;
   private expected = -1;
+  private readonly sessionId = crypto.randomUUID();
   private generation = 0;
   private lastSequence = -1;
   private view: ControlledView = { kind: "BLACK" };
@@ -167,7 +169,7 @@ export class ProductionFrameController {
    * validated existing lookahead without permitting frame/manual-barrier skips. */
   acceptMatch(event: MatchedCueEvent): boolean {
     if (this.mode !== "BLACK_AUTO" && this.mode !== "AUTO_LIVE") return false;
-    if (event.generation !== this.generation || !Number.isSafeInteger(event.sequence) || event.sequence < 0 || event.sequence <= this.lastSequence) return false;
+    if (event.sessionId !== this.sessionId || event.generation !== this.generation || !Number.isSafeInteger(event.sequence) || event.sequence < 0 || event.sequence <= this.lastSequence) return false;
     this.lastSequence = event.sequence;
     const cue = this.cueInAct(this.expected);
     if (!cue || cue.id !== event.cueId) return false;
@@ -187,6 +189,6 @@ export class ProductionFrameController {
   snapshot(): FrameControlSnapshot {
     return { actId: this.actId, mode: this.mode, frameId: this.frameInAct(this.position)?.id ?? null,
       trackingCueId: this.cueInAct(this.tracking)?.id ?? null, expectedCueId: this.cueInAct(this.expected)?.id ?? null,
-      generation: this.generation, view: structuredClone(this.view) };
+      sessionId: this.sessionId, generation: this.generation, view: structuredClone(this.view) };
   }
 }
