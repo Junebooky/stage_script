@@ -35,7 +35,7 @@ function controller() {
   return c;
 }
 function match(c: ProductionFrameController, cueId: string, sequence: number, generation = c.snapshot().generation) {
-  return c.acceptMatch({ cueId, sequence, generation });
+  return c.acceptMatch({ cueId, sequence, generation, sessionId: c.snapshot().sessionId });
 }
 function firstSong(c: ProductionFrameController) {
   expect(c.blackAuto("dialogue")).toBe(true);
@@ -111,6 +111,16 @@ describe("experimental production frame controller", () => {
     expect(match(c, "c1", 99, old)).toBe(false);
     expect(c.snapshot().view).toEqual({ kind: "BLACK" });
     expect(match(c, "c1", 1)).toBe(true);
+  });
+  it("rejects a stale event from a different controller instance", () => {
+    const old = controller();
+    old.blackAuto("dialogue");
+    const fresh = controller();
+    fresh.blackAuto("dialogue");
+    expect(old.snapshot().generation).toBe(fresh.snapshot().generation);
+    expect(fresh.acceptMatch({ sessionId: old.snapshot().sessionId, generation: old.snapshot().generation, sequence: 1, cueId: "c1" })).toBe(false);
+    expect(fresh.snapshot().view).toEqual({ kind: "BLACK" });
+    expect(match(fresh, "c1", 1)).toBe(true);
   });
   it("rejects duplicate, reordered and invalid sequence numbers", () => {
     const c = controller();
